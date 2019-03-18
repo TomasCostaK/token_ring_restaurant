@@ -79,27 +79,37 @@ class DHT_Node(threading.Thread):
         args = {'predecessor_id': self.id, 'predecessor_addr': self.addr}
         self.send(self.successor_addr, {'method': 'NOTIFY', 'args':args})
 
-    def put(self, key, value, address):
+    def put(self, key, value, address, src_address=None):
         key_hash = dht_hash(key)
         self.logger.debug('Put: %s %s', key, key_hash)
-        if self.id < key_hash <= self.successor_id:
+        self.logger.debug('%s < %s < %s', self.id, key_hash, self.successor_id)
+        if self.id < key_hash <= self.successor_id or self.id < key_hash <= 1024:
             self.keystore[key] = value
-            self.send(address, {'method': 'ACK'})
+            if src_address != None:
+                self.send(src_address, {'method': 'ACK', 'args': value})
+            else:
+                self.send(address, {'method': 'ACK', 'args': value})
         else:
             # send to DHT
-            # Fill here
-            self.send(address, {'method': 'NACK'})
+            if src_address == None:
+                src_address = address
+            self.send(self.successor_addr, {'method': 'PUT',  'args':{'key':key, 'src_addr':src_address, 'value':value }})
 
-    def get(self, key, address):
+    def get(self, key, address, src_address=None):
         key_hash = dht_hash(key)
         self.logger.debug('Get: %s %s', key, key_hash)
-        if self.id < key_hash <= self.successor_id:
+        if self.id < key_hash <= self.successor_id or self.id < key_hash <= 1024:
             value = self.keystore[key]
-            self.send(address, {'method': 'ACK', 'args': value})
+            if src_address != None:
+                self.send(src_address, {'method': 'ACK', 'args': value})
+            else:
+                self.send(address, {'method': 'ACK', 'args': value})
         else:
             # send to DHT
-            # Fill here
-            self.send(address, {'method': 'NACK'})
+            if src_address == None:
+                src_address = address
+            self.send(self.successor_addr, {'method': 'GET',  'args':{'key':key, 'src_addr':src_address }})
+            # self.send(address, {'method': 'ACK'})
 
     def run(self):
         self.socket.bind(self.addr)
@@ -129,9 +139,15 @@ class DHT_Node(threading.Thread):
                 elif o['method'] == 'NOTIFY':
                     self.notify(o['args'])
                 elif o['method'] == 'PUT':
-                    self.put(o['args']['key'], o['args']['value'], addr)
+                    if 'src_address' in o['args']:
+                        self.put(o['args']['key'], o['args']['value'], addr, o['args']['src_address'])
+                    else:
+                        self.put(o['args']['key'], o['args']['value'], addr)
                 elif o['method'] == 'GET':
-                    self.get(o['args']['key'], addr)
+                    if 'src_address' in o['args']:
+                        self.get(o['args']['key'], addr, o['args']['src_address'])
+                    else:
+                        self.get(o['args']['key'], addr)
                 elif o['method'] == 'PREDECESSOR':
                     self.send(addr, {'method': 'STABILIZE', 'args': self.predecessor_id})
                 elif o['method'] == 'STABILIZE':
