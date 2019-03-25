@@ -7,6 +7,7 @@ import pickle
 import collections
 from utils import dht_hash, contains_predecessor, contains_successor
 
+FINGER_TABLE_SIZE = 20
 
 class DHT_Node(threading.Thread):
     def __init__(self, address, dht_address=None, timeout=3):
@@ -14,8 +15,7 @@ class DHT_Node(threading.Thread):
         self.id = dht_hash(address.__str__())
         self.addr = address
         self.dht_address = dht_address
-        self.finger_table = {}
-        self.FINGER_TABLE_SIZE = 20
+        self.finger_table = dict()
         if dht_address is None:
             self.successor_id = self.id
             self.successor_addr = address
@@ -32,14 +32,15 @@ class DHT_Node(threading.Thread):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.id))
-        self.add_finger(self.successor_id, self.successor_addr)
+        # self.add_finger(self.successor_id, self.successor_addr)
 
     def add_finger(self, node_id, node_address):
         if len(self.finger_table) < FINGER_TABLE_SIZE:
             self.finger_table[node_id] = node_address
             self.logger.info('Updated finger table: %s', self.finger_table) 
         else:
-            if (to_rm = fit_node(node_id)) != 0:
+            to_rm = fit_node(node_id)
+            if to_rm != 0:
                 self.finger_table[node_id] = node_address
                 del self.finger_table[to_rm]
 
@@ -52,7 +53,16 @@ class DHT_Node(threading.Thread):
         return 0
 
     def get_finger_table(self, hash_key):
+        tmp = sorted(self.finger_table)
+        tmp.reverse()
+        self.logger.info('Finger table: %s', tmp)
         # TODO: iterate finger table and return closest address
+        for iid in tmp: # iterate through elements of finger table in reverse order
+            if hash_key > iid:
+                return self.finger_table[iid]
+        # if none fits, return last node
+        return self.finger_table[list(self.finger_table).reverse[-1]]
+
 
     def send(self, address, o):
         p = pickle.dumps(o)
@@ -73,7 +83,8 @@ class DHT_Node(threading.Thread):
         self.logger.debug('Node join: %s', args)
         addr = args['addr']
         identification = args['id']
-        self.add_finger(identification, addr)
+        if identification is not None and addr is not None:
+            self.add_finger(identification, addr)
         if self.id == self.successor_id:
             self.successor_id = identification
             self.successor_addr = addr
@@ -120,7 +131,7 @@ class DHT_Node(threading.Thread):
             # send to DHT
             if src_address == None:
                 src_address = address
-            self.send(self.successor_addr, {'method': 'PUT',  'args':{'key':key, 'src_address':src_address, 'value':value }})
+            self.send(self.get_finger_table(key_hash), {'method': 'PUT',  'args':{'key':key, 'src_address':src_address, 'value':value }})
 
     def get(self, key, address, src_address=None):
         key_hash = dht_hash(key)
@@ -135,7 +146,7 @@ class DHT_Node(threading.Thread):
             # send to DHT
             if src_address == None:
                 src_address = address
-            self.send(self.successor_addr, {'method': 'GET',  'args':{'key':key, 'src_address':src_address }})
+            self.send(self.get_finger_table(key_hash), {'method': 'GET',  'args':{'key':key, 'src_address':src_address }})
 
     def run(self):
         self.socket.bind(self.addr)
