@@ -4,6 +4,7 @@ import socket
 import threading
 import logging
 import pickle
+import collections
 from utils import dht_hash, contains_predecessor, contains_successor
 
 
@@ -13,6 +14,8 @@ class DHT_Node(threading.Thread):
         self.id = dht_hash(address.__str__())
         self.addr = address
         self.dht_address = dht_address
+        self.finger_table = {}
+        self.FINGER_TABLE_SIZE = 20
         if dht_address is None:
             self.successor_id = self.id
             self.successor_addr = address
@@ -29,6 +32,27 @@ class DHT_Node(threading.Thread):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.id))
+        self.add_finger(self.successor_id, self.successor_addr)
+
+    def add_finger(self, node_id, node_address):
+        if len(self.finger_table) < FINGER_TABLE_SIZE:
+            self.finger_table[node_id] = node_address
+            self.logger.info('Updated finger table: %s', self.finger_table) 
+        else:
+            if (to_rm = fit_node(node_id)) != 0:
+                self.finger_table[node_id] = node_address
+                del self.finger_table[to_rm]
+
+    def fit_node(self, node_id):
+        # avg_fit = sum(list(self.finger_table)) / FINGER_TABLE_SIZE
+        avg_fit = 1024/5
+        for iid in range(list(self.finger_table)):
+            if (node_id - list(self.finger_table)[iid]) > avg_fit and node_id < list(self.finger_table)[iid+1]:
+                return list(self.finger_table)[iid+1]
+        return 0
+
+    def get_finger_table(self, hash_key):
+        # TODO: iterate finger table and return closest address
 
     def send(self, address, o):
         p = pickle.dumps(o)
@@ -49,6 +73,7 @@ class DHT_Node(threading.Thread):
         self.logger.debug('Node join: %s', args)
         addr = args['addr']
         identification = args['id']
+        self.add_finger(identification, addr)
         if self.id == self.successor_id:
             self.successor_id = identification
             self.successor_addr = addr
@@ -83,22 +108,24 @@ class DHT_Node(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug('Put: %s %s', key, key_hash)
         self.logger.debug('%s < %s < %s', self.id, key_hash, self.successor_id)
-        if self.id < key_hash <= self.successor_id or self.id < key_hash <= 1024:
+        if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
             self.keystore[key] = value
             if src_address != None:
-                self.send(src_address, {'method': 'ACK', 'args': value})
+                self.logger.debug("Sending to %s", src_address)
+                self.send(src_address, {'method': 'ACK', 'args': { 'value' : value } })
             else:
-                self.send(address, {'method': 'ACK', 'args': value})
+                self.logger.debug("Sending to %s", address)
+                self.send(address, {'method': 'ACK', 'args': { 'value' : value }})
         else:
             # send to DHT
             if src_address == None:
                 src_address = address
-            self.send(self.successor_addr, {'method': 'PUT',  'args':{'key':key, 'src_addr':src_address, 'value':value }})
+            self.send(self.successor_addr, {'method': 'PUT',  'args':{'key':key, 'src_address':src_address, 'value':value }})
 
     def get(self, key, address, src_address=None):
         key_hash = dht_hash(key)
         self.logger.debug('Get: %s %s', key, key_hash)
-        if self.id < key_hash <= self.successor_id or self.id < key_hash <= 1024:
+        if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
             value = self.keystore[key]
             if src_address != None:
                 self.send(src_address, {'method': 'ACK', 'args': value})
@@ -108,8 +135,7 @@ class DHT_Node(threading.Thread):
             # send to DHT
             if src_address == None:
                 src_address = address
-            self.send(self.successor_addr, {'method': 'GET',  'args':{'key':key, 'src_addr':src_address }})
-            # self.send(address, {'method': 'ACK'})
+            self.send(self.successor_addr, {'method': 'GET',  'args':{'key':key, 'src_address':src_address }})
 
     def run(self):
         self.socket.bind(self.addr)
