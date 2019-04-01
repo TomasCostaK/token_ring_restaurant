@@ -20,6 +20,11 @@ def main():
     # retrieve from DHT (this key is not on the first node -> remote search)
     print(client.get('2'))
 
+    client.put('5', ('smth'))
+    print(client.get('5'))
+
+    client.put('9', ('qwlld'))
+    print(client.get('9'))
 
 if __name__ == '__main__':
     main()

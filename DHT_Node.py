@@ -7,7 +7,8 @@ import pickle
 import collections
 from utils import dht_hash, contains_predecessor, contains_successor
 
-FINGER_TABLE_SIZE = 20
+FINGER_TABLE_SIZE = 5
+avg_fit = 1024/5
 
 class DHT_Node(threading.Thread):
     def __init__(self, address, dht_address=None, timeout=3):
@@ -46,7 +47,6 @@ class DHT_Node(threading.Thread):
 
     def fit_node(self, node_id):
         # avg_fit = sum(list(self.finger_table)) / FINGER_TABLE_SIZE
-        avg_fit = 1024/5
         for iid in range(list(self.finger_table)):
             if (node_id - list(self.finger_table)[iid]) > avg_fit and node_id < list(self.finger_table)[iid+1]:
                 return list(self.finger_table)[iid+1]
@@ -61,7 +61,10 @@ class DHT_Node(threading.Thread):
             if hash_key > iid:
                 return self.finger_table[iid]
         # if none fits, return last node
-        return self.finger_table[list(self.finger_table).reverse[-1]]
+        # if len(tmp)==0:
+        #     return self.addr
+        self.logger.debug('Returning %s : %s', tmp[0], self.finger_table[tmp[0]])
+        return self.finger_table[tmp[0]]
 
 
     def send(self, address, o):
@@ -100,6 +103,11 @@ class DHT_Node(threading.Thread):
             self.send(self.successor_addr, {'method': 'JOIN_REQ', 'args':args})
         self.logger.info(self)
 
+    def finger_advertise(self):
+        if self.successor_id != None:
+            self.add_finger(self.successor_id, self.successor_addr)
+
+
     def notify(self, args):
         self.logger.debug('Notify: %s', args)
         if self.predecessor_id is None or contains_predecessor(self.id, self.predecessor_id, args['predecessor_id']):
@@ -119,7 +127,8 @@ class DHT_Node(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug('Put: %s %s', key, key_hash)
         self.logger.debug('%s < %s < %s', self.id, key_hash, self.successor_id)
-        if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
+        # if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
+        if contains_successor(self.id, self.successor_id, key_hash):
             self.keystore[key] = value
             if src_address != None:
                 self.logger.debug("Sending to %s", src_address)
@@ -136,7 +145,8 @@ class DHT_Node(threading.Thread):
     def get(self, key, address, src_address=None):
         key_hash = dht_hash(key)
         self.logger.debug('Get: %s %s', key, key_hash)
-        if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
+        # if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
+        if contains_successor(self.id, self.successor_id, key_hash):
             value = self.keystore[key]
             if src_address != None:
                 self.send(src_address, {'method': 'ACK', 'args': value})
@@ -164,6 +174,7 @@ class DHT_Node(threading.Thread):
                     self.successor_addr = args['successor_addr']
                     self.inside_dht = True
                     self.logger.info(self)
+                    self.add_finger(self.successor_id, self.successor_addr)
 
         done = False
         while not done:
