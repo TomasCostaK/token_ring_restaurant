@@ -11,12 +11,14 @@ FINGER_TABLE_SIZE = 5
 avg_fit = 1024/5
 
 class DHT_Node(threading.Thread):
-    def __init__(self, address, dht_address=None, timeout=3):
+    def __init__(self, address, dht_address=None, timeout=3, node_id=None):
         threading.Thread.__init__(self)
-        self.id = dht_hash(address.__str__())
+        self.id = node_id
         self.addr = address
         self.dht_address = dht_address
         self.finger_table = dict()
+        if node_id is None:
+            self.node_id = dht_hash(address.__str__())
         if dht_address is None:
             self.successor_id = self.id
             self.successor_addr = address
@@ -33,7 +35,6 @@ class DHT_Node(threading.Thread):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.id))
-        # self.add_finger(self.successor_id, self.successor_addr)
 
     def add_finger(self, node_id, node_address):
         if len(self.finger_table) < FINGER_TABLE_SIZE:
