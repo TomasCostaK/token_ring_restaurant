@@ -5,6 +5,7 @@ import threading
 import logging
 import pickle
 import collections
+import queue
 from utils import dht_hash, contains_predecessor, contains_successor
 
 FINGER_TABLE_SIZE = 5
@@ -31,7 +32,7 @@ class DHT_Node(threading.Thread):
             self.successor_addr = None
             self.predecessor_id = None
             self.predecessor_addr = None
-        self.keystore = {}
+        self.req_queue = Queue()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.id))
@@ -124,38 +125,19 @@ class DHT_Node(threading.Thread):
         args = {'predecessor_id': self.id, 'predecessor_addr': self.addr}
         self.send(self.successor_addr, {'method': 'NOTIFY', 'args':args})
 
-    def put(self, key, value, address, src_address=None):
-        key_hash = dht_hash(key)
-        self.logger.debug('Put: %s %s', key, key_hash)
-        self.logger.debug('%s < %s < %s', self.id, key_hash, self.successor_id)
-        if contains_successor(self.id, self.successor_id, key_hash):
-            self.keystore[key] = value
-            if src_address != None:
-                self.logger.debug("Sending to %s", src_address)
-                self.send(src_address, {'method': 'ACK', 'args': { 'value' : value } })
-            else:
-                self.logger.debug("Sending to %s", address)
-                self.send(address, {'method': 'ACK', 'args': { 'value' : value }})
+    def put(self, key, value, address):
+        self.logger.debug('Put: %s', key)
+        # self.logger.debug('%s == %s', self.id, key)
+        if self.id == key:
+            self.req_queue.put(value)
+            self.logger.debug("Sending to %s", address)
+            self.send(address, {'method': 'ACK', 'args': { 'value' : value }})
         else:
             # send to DHT
-            if src_address == None:
-                src_address = address
-            self.send(address, {'method': 'PUT',  'args':{'key':key, 'src_address':src_address, 'value':value }})
+            self.send(self.successor_addr, {'method': 'PUT',  'args':{'key':key, 'value':value }})
 
-    def get(self, key, address, src_address=None):
-        key_hash = dht_hash(key)
-        self.logger.debug('Get: %s %s', key, key_hash)
-        if contains_successor(self.id, self.successor_id, key_hash):
-            value = self.keystore[key]
-            if src_address != None:
-                self.send(src_address, {'method': 'ACK', 'args': value})
-            else:
-                self.send(address, {'method': 'ACK', 'args': value})
-        else:
-            # send to DHT
-            if src_address == None:
-                src_address = address
-            self.send(address, {'method': 'GET',  'args':{'key':key, 'src_address':src_address }})
+    def get(self, key, address):
+        return self.req_queue.get()
 
     def run(self):
         self.socket.bind(self.addr)
