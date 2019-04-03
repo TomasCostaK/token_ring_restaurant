@@ -16,7 +16,7 @@ class DHT_Node(threading.Thread):
         self.id = node_id
         self.addr = address
         self.dht_address = dht_address
-        self.finger_table = dict()
+        # self.finger_table = dict()
         if node_id is None:
             self.node_id = dht_hash(address.__str__())
         if dht_address is None:
@@ -36,36 +36,36 @@ class DHT_Node(threading.Thread):
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.id))
 
-    def add_finger(self, node_id, node_address):
-        if len(self.finger_table) < FINGER_TABLE_SIZE:
-            self.finger_table[node_id] = node_address
-            self.logger.info('Updated finger table: %s', self.finger_table) 
-        else:
-            to_rm = fit_node(node_id)
-            if to_rm != 0:
-                self.finger_table[node_id] = node_address
-                del self.finger_table[to_rm]
+    # def add_finger(self, node_id, node_address):
+    #     if len(self.finger_table) < FINGER_TABLE_SIZE:
+    #         self.finger_table[node_id] = node_address
+    #         self.logger.info('Updated finger table: %s', self.finger_table) 
+    #     else:
+    #         to_rm = fit_node(node_id)
+    #         if to_rm != 0:
+    #             self.finger_table[node_id] = node_address
+    #             del self.finger_table[to_rm]
 
-    def fit_node(self, node_id):
-        # avg_fit = sum(list(self.finger_table)) / FINGER_TABLE_SIZE
-        for iid in range(list(self.finger_table)):
-            if (node_id - list(self.finger_table)[iid]) > avg_fit and node_id < list(self.finger_table)[iid+1]:
-                return list(self.finger_table)[iid+1]
-        return 0
+    # def fit_node(self, node_id):
+    #     # avg_fit = sum(list(self.finger_table)) / FINGER_TABLE_SIZE
+    #     for iid in range(list(self.finger_table)):
+    #         if (node_id - list(self.finger_table)[iid]) > avg_fit and node_id < list(self.finger_table)[iid+1]:
+    #             return list(self.finger_table)[iid+1]
+    #     return 0
 
-    def get_finger_table(self, hash_key):
-        tmp = sorted(self.finger_table)
-        tmp.reverse()
-        self.logger.info('Finger table: %s', tmp)
-        # TODO: iterate finger table and return closest address
-        for iid in tmp: # iterate through elements of finger table in reverse order
-            if hash_key > iid:
-                return self.finger_table[iid]
-        # if none fits, return last node
-        # if len(tmp)==0:
-        #     return self.addr
-        self.logger.debug('Returning %s : %s', tmp[0], self.finger_table[tmp[0]])
-        return self.finger_table[tmp[0]]
+    # def get_finger_table(self, hash_key):
+    #     tmp = sorted(self.finger_table)
+    #     tmp.reverse()
+    #     self.logger.info('Finger table: %s', tmp)
+    #     # TODO: iterate finger table and return closest address
+    #     for iid in tmp: # iterate through elements of finger table in reverse order
+    #         if hash_key > iid:
+    #             return self.finger_table[iid]
+    #     # if none fits, return last node
+    #     # if len(tmp)==0:
+    #     #     return self.addr
+    #     self.logger.debug('Returning %s : %s', tmp[0], self.finger_table[tmp[0]])
+    #     return self.finger_table[tmp[0]]
 
 
     def send(self, address, o):
@@ -87,8 +87,8 @@ class DHT_Node(threading.Thread):
         self.logger.debug('Node join: %s', args)
         addr = args['addr']
         identification = args['id']
-        if identification is not None and addr is not None:
-            self.add_finger(identification, addr)
+        # if identification is not None and addr is not None:
+        #     self.add_finger(identification, addr)
         if self.id == self.successor_id:
             self.successor_id = identification
             self.successor_addr = addr
@@ -104,9 +104,9 @@ class DHT_Node(threading.Thread):
             self.send(self.successor_addr, {'method': 'JOIN_REQ', 'args':args})
         self.logger.info(self)
 
-    def finger_advertise(self):
-        if self.successor_id != None:
-            self.add_finger(self.successor_id, self.successor_addr)
+    # def finger_advertise(self):
+    #     if self.successor_id != None:
+    #         self.add_finger(self.successor_id, self.successor_addr)
 
 
     def notify(self, args):
@@ -128,7 +128,6 @@ class DHT_Node(threading.Thread):
         key_hash = dht_hash(key)
         self.logger.debug('Put: %s %s', key, key_hash)
         self.logger.debug('%s < %s < %s', self.id, key_hash, self.successor_id)
-        # if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
         if contains_successor(self.id, self.successor_id, key_hash):
             self.keystore[key] = value
             if src_address != None:
@@ -141,12 +140,11 @@ class DHT_Node(threading.Thread):
             # send to DHT
             if src_address == None:
                 src_address = address
-            self.send(self.get_finger_table(key_hash), {'method': 'PUT',  'args':{'key':key, 'src_address':src_address, 'value':value }})
+            self.send(address, {'method': 'PUT',  'args':{'key':key, 'src_address':src_address, 'value':value }})
 
     def get(self, key, address, src_address=None):
         key_hash = dht_hash(key)
         self.logger.debug('Get: %s %s', key, key_hash)
-        # if self.id < key_hash <= self.successor_id or self.successor_id < self.id <= key_hash:
         if contains_successor(self.id, self.successor_id, key_hash):
             value = self.keystore[key]
             if src_address != None:
@@ -157,7 +155,7 @@ class DHT_Node(threading.Thread):
             # send to DHT
             if src_address == None:
                 src_address = address
-            self.send(self.get_finger_table(key_hash), {'method': 'GET',  'args':{'key':key, 'src_address':src_address }})
+            self.send(address, {'method': 'GET',  'args':{'key':key, 'src_address':src_address }})
 
     def run(self):
         self.socket.bind(self.addr)
@@ -175,7 +173,7 @@ class DHT_Node(threading.Thread):
                     self.successor_addr = args['successor_addr']
                     self.inside_dht = True
                     self.logger.info(self)
-                    self.add_finger(self.successor_id, self.successor_addr)
+                    # self.add_finger(self.successor_id, self.successor_addr)
 
         done = False
         while not done:
