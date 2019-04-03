@@ -1,5 +1,8 @@
 # coding: utf-8
-
+RESTAURANT_ID = 0
+RECEPTIONIST_ID = 1
+COOK_ID = 2
+EMPLOYEE_ID = 3
 
 # FNV-1a Hash Function
 def dht_hash(text, seed=0, maximum=1024):
