@@ -1,22 +1,28 @@
-# CHORD (DHT)
+# Drive-Through Restaurant P2P
 
-This repository implement a simple version of the [CHORD](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) algorithm.
-The provided code already setups the ring network properly.
-1. Supports Node Joins
-2. Finds the correct successor for a node
-3. Run Stabilize periodically to correct the network
+## Prerequisites
 
+* Clone this repository
 
-## Running the example
-Run in two different terminal:
+## How to run
+Open two terminals:
 
-DHT (setups a CHORD DHT):
+restaurant:
 ```console
-$ python3 DHT.py
+$ python restaurant.py
 ```
-example (put and get objects from the DHT):
+client:
 ```console
-$ python3 example.py
+$ python client.py
+```
+
+## Git Upstream
+
+Keep your fork sync with the upstream
+
+```console
+$ git remote add upstream git@github.com:mariolpantunes/restaurant-p2p.git
+$ git pull upstream master
 ```
 
 ## Authors
