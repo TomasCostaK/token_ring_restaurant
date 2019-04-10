@@ -1,4 +1,6 @@
 # coding: utf-8
+import numpy as np
+
 RESTAURANT_ID = 0
 RECEPTIONIST_ID = 1
 COOK_ID = 2
@@ -30,3 +32,7 @@ def contains_successor(identification, successor, node):
         return True
     return False
 
+def work():
+    mu, sigma = 2, 0.5
+    s = np.random.normal(mu, sigma, 1000)
+    sleep(s)
