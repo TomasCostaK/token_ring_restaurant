@@ -1,5 +1,25 @@
 # Drive-Through Restaurant P2P
 
+## How to run
+**What to do next:**
+	Lifecycle Nodes:
+
+		Junçao:
+			Ligam-se todos ao restaurante
+			Passar mensagem com o dicionario com os ID's das entidades
+			Passar 2 vezes a mensagem
+
+		Discovery:
+			--
+			--
+
+		Processo de receber token:
+			1. UDP
+			2. Check if ID da MSG == NodeID (else go to 5.)
+			3. Guardar a mensagem na queue in
+			4. Ver se queueOut > 0 e enviar a mensagem no queue out
+			5. Passa token a sucessor
+
 ## Prerequisites
 
 * Clone this repository
