@@ -13,11 +13,11 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M:%S')
 
 class Restaurant(Node):
-    def __init__(self, own_id, address, root_id, root_address, timeout=3):
-    	Node.__init__(self, 0, address, root_id, root_address, timeout=3)
-    	self.queueIn = queue.Queue
-    	self.queueOut = queue.Queue
-    	self.logger = logging.getLogger("Restaurante {}".format(self.own_id))
+    def __init__(self, own_id, address, root_id, root_address):
+	    super().__init__(0, address, root_id, root_address, timeout=3)
+	    self.queueIn = queue.Queue
+	    self.queueOut = queue.Queue
+	    self.logger = logging.getLogger("Rececionista {}".format(self.id))
 
     def receiveRequest(self,args): 
         #if method == ORDER (vem do client)
@@ -43,7 +43,6 @@ def main():
     p = self.sock.recvfrom(1024)
     o = pickle.loads(p)
     logger.info('Received ticket %s', o['args'])
-
 
 
 if __name__ == '__main__':
