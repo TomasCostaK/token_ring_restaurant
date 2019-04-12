@@ -82,3 +82,4 @@ class Node(threading.Thread):
                 self.logger.info('O: %s', o)
                 if o['method'] == 'NODE_JOIN':
                     self.neighbor_ack(o['args'])
+
