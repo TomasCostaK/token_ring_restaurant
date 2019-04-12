@@ -13,52 +13,38 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M:%S')
 
 class Restaurant(Node):
-	def __init__(self)
-		super().__init__(self, 0, address, root_id, root_address, timeout=3)
-		self.queueIn = queue.Queue
-		self.queueOut = queue.Queue
-		self.logger = logging.getLogger("Rececionista {}".format(self.id))
+    def __init__(self, own_id, address, root_id, root_address, timeout=3):
+    	Node.__init__(self, 0, address, root_id, root_address, timeout=3)
+    	self.queueIn = queue.Queue
+    	self.queueOut = queue.Queue
+    	self.logger = logging.getLogger("Restaurante {}".format(self.own_id))
+
+    def receiveRequest(self,args): 
+        #if method == ORDER (vem do client)
+        pass
+        #responder com ticket para o cliente mais tarde dar pickup
+
+    def grillRequest(self,args): #if grillReq
+        pass
+
+    def fryRequest(self,args): #if foodReq
+        pass
+
+    def drinkRequest(self,args): #if drinkReq
+        pass
+
+    def send(self, address, o):
+        #Usar o metodo em Node
+        super().send(address,o)
 
 
-	def receiveRequest(self,args): #if method == ORDER (vem do client)
-	#responder com ticket para o cliente mais tarde dar pickup
-
-	def grillRequest(self,args): #if grillReq
-
-
-	def fryRequest(self,args): #if foodReq
-
-
-	def drinkRequest(self,args): #if drinkReq
-
-
-	def send(self, address, o):
-
-
-def main(port, ring, timeout):
+def main():
 # logger for the main
-    logger = logging.getLogger('Restaurant')
-    # list with all the nodes
-    ring = []
+    p = self.sock.recvfrom(1024)
+    o = pickle.loads(p)
+    logger.info('Received ticket %s', o['args'])
 
-    # initial node on DHT
-    node = Node(0, ('localhost', 5000), 0, ('localhost', 5000))
-    node.start()
-    ring.append(node)
-    logger.info(node)
-
-    for i in range(number_nodes-1):
-        node = Node(i+1, ('localhost', 5001+i), 0, ('localhost', 5000))
-        node.start()
-        ring.append(node)
-        logger.info(node)
-
-    # Await for DHT to get stable
-    time.sleep(10)
-
-    for node in ring:
-        node.join()
 
 
 if __name__ == '__main__':
-    main(5)
+    main()
