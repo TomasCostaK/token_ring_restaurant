@@ -30,11 +30,17 @@ class Restaurant(Node):
             self.logger.debug('Received: %s %s',args[foodKey],foodKey)
 
         #responder com ticket para o cliente mais tarde dar pickup
-        msg = {'method': 'RECV_ORDER', 'args': '12'} #str(uuid.uuid1())
-        p = pickle.dumps(msg)
+        msgDict = {'method': 'RECV_ORDER', 'args': str(uuid.uuid1())}
         #self.send(p, addr)
-        self.socket.sendto(p, address)
-        self.logger.debug('Sending Client Ticket: %s', msg['args'])
+        self.logger.debug('Sending %s Ticket: %s', address ,msgDict['args'])
+        self.send(msgDict, address)
+
+    def deliverOrder(self,args,address):
+
+        msgDict = {'method': 'FOOD_DELIVERED', 'args': str(uuid.uuid1())}
+        #self.send(p, addr)
+        self.logger.debug('Sending %s food to client with ticket: %s', address ,msgDict['args'])
+        self.send(msgDict, address)
 
     def grillRequest(self,args): #if grillReq
         pass
@@ -45,8 +51,8 @@ class Restaurant(Node):
     def drinkRequest(self,args): #if drinkReq
         pass
 
-    def send(self, p, address):
-        #Usar o metodo em Node
+    def send(self, o, address):
+        p = pickle.dumps(o)
         self.socket.sendto(p, address)
 
     def recv(self):
@@ -69,6 +75,8 @@ class Restaurant(Node):
                 self.logger.debug('Received O: %s', o)
                 if o['method'] == 'ORDER':
                     self.receiveRequest(o['args'],addr)
+                if o['method'] == 'PICKUP':
+                    self.deliverOrder(o['args'],addr)
 
 
 def main():
