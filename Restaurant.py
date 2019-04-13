@@ -19,21 +19,26 @@ class Restaurant(Node):
         super().__init__(0, address, root_id, root_address)
         self.queueIn = queue.Queue
         self.queueOut = queue.Queue
+        self.queueGrill = queue.Queue
+        self.queueDrinks = queue.Queue
+        self.queueFries = queue.Queue
+        #HardcodedAddress do rececionista
+        self.ReceptionistAddr = ('localhost', 5001)
+        self.ReceptionistID = 1
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.socket.bind((self.address))
         self.logger = logging.getLogger("Rececionista {}".format(self.own_id))
 
-    def receiveRequest(self,args,address): 
+    def receiveRequest(self,objeto): 
         #if method == ORDER (vem do client)
-        for foodKey in args: #depois guardar nas queues correspondentes
-            self.logger.debug('Received: %s %s',args[foodKey],foodKey)
-
+        self.logger.debug('Got from client')
+        objeto['args']['idDestino']=self.ReceptionistID
         #responder com ticket para o cliente mais tarde dar pickup
-        msgDict = {'method': 'RECV_ORDER', 'args': str(uuid.uuid1())}
+        msgDict = {'method': 'TOKEN', 'args': objeto}
         #self.send(p, addr)
-        self.logger.debug('Sending %s Ticket: %s', address ,msgDict['args'])
-        self.send(msgDict, address)
+        self.logger.debug('Sending %s Ticket: %s', self.ReceptionistAddr, msgDict)
+        self.send(msgDict, self.ReceptionistAddr)
 
     def deliverOrder(self,args,address):
 
@@ -73,8 +78,8 @@ class Restaurant(Node):
             if p is not None:
                 o = pickle.loads(p)
                 self.logger.debug('Received O: %s', o)
-                if o['method'] == 'ORDER':
-                    self.receiveRequest(o['args'],addr)
+                if o['method'] == 'ORDER': #vamos enviar o objeto todo e usamos no args do method:token
+                    self.receiveRequest(o)
                 if o['method'] == 'PICKUP':
                     self.deliverOrder(o['args'],addr)
 
