@@ -30,10 +30,11 @@ class Restaurant(Node):
         self.socket.bind((self.address))
         self.logger = logging.getLogger("Rececionista {}".format(self.own_id))
 
-    def receiveRequest(self,objeto): 
+    def receiveRequest(self,objeto,clientAddr): 
         #if method == ORDER (vem do client)
         self.logger.debug('Got from client')
         objeto['args']['idDestino']=self.ReceptionistID
+        objeto['args']['clientAddr']=clientAddr
         #responder com ticket para o cliente mais tarde dar pickup
         msgDict = {'method': 'TOKEN', 'args': objeto}
         #self.send(p, addr)
@@ -79,7 +80,7 @@ class Restaurant(Node):
                 o = pickle.loads(p)
                 self.logger.debug('Received O: %s', o)
                 if o['method'] == 'ORDER': #vamos enviar o objeto todo e usamos no args do method:token
-                    self.receiveRequest(o)
+                    self.receiveRequest(o,addr)
                 if o['method'] == 'PICKUP':
                     self.deliverOrder(o['args'],addr)
 

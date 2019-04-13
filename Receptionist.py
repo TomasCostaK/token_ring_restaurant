@@ -3,6 +3,7 @@
 import time
 import pickle
 import socket
+import uuid
 import logging
 import queue
 # import argparse
@@ -26,7 +27,13 @@ class Receptionist(Node):
         self.logger = logging.getLogger("Rececionista {}".format(self.own_id))
 
     def receiveRequest(self,objeto): 
-        pass
+        # adicionar a fila de pedidos a entregar ao cook, ex msg: {'method': 'ORDER', 'args': {'hamburger': 1, 'idDestino': 1}}
+        objeto['args']['idDestino']=self.CookID
+        msg = {'method':'ORDER_RECVD', 'args': str(uuid.uuid1())} #send clients unique ticket
+        p = pickle.dumps(msg)
+        self.logger.debug("Object: %s is now in the queue", objeto)
+        #self.queueOut.put(objeto)
+        self.socket.send(p, objeto['args']['clientAddr'])
 
     def deliverOrder(self,args,address):
         pass
@@ -54,7 +61,9 @@ class Receptionist(Node):
                 o = pickle.loads(p)
                 self.logger.debug('Received Object: %s', o)
                 if o['method'] == 'TOKEN' and o['args']['args']['idDestino']==self.own_id: #vamos enviar o objeto todo e usamos no args do method:token
-                    self.logger.debug("This token is for me: %s", o)
+                    self.logger.debug("This token is for me")
+                    if o['args']['method']=='ORDER':
+                        self.receiveRequest(o['args'])
 
 
 def main():
