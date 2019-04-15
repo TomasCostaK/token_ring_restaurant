@@ -41,6 +41,18 @@ def main(number_nodes):
     # Await for DHT to get stable
     time.sleep(5)
 
+    # Print the ring order for debug
+    msg = { 'method' : 'PRINT_RING' }
+    tsocket.sendto(pickle.dumps(msg), ('localhost', 5003))
+
+    # Start building the table from the root node
+    msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : {} , 'rounds' : 0 } }
+    tsocket.sendto(pickle.dumps(msg), ('localhost', 5003))
+
+    # Await for DHT to get stable
+    time.sleep(5)
+
+    # Print the ring order for debug
     msg = { 'method' : 'PRINT_TABLE' }
     tsocket.sendto(pickle.dumps(msg), ('localhost', 5003))
 
