@@ -23,8 +23,8 @@ class Restaurant(Node):
         self.queueDrinks = queue.Queue
         self.queueFries = queue.Queue
         #HardcodedAddress do rececionista
-        self.ReceptionistAddr = ('localhost', 5001)
-        self.ReceptionistID = 1
+        self.sucessor_address = ('localhost', 5001)
+        self.sucessor_id = 1
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.socket.bind((self.address))
@@ -33,13 +33,13 @@ class Restaurant(Node):
     def receiveRequest(self,objeto,clientAddr): 
         #if method == ORDER (vem do client)
         self.logger.debug('Got from client')
-        objeto['args']['idDestino']=self.ReceptionistID
+        objeto['args']['idDestino']=self.sucessor_id
         objeto['args']['clientAddr']=clientAddr
         #responder com ticket para o cliente mais tarde dar pickup
         msgDict = {'method': 'TOKEN', 'args': objeto}
         #self.send(p, addr)
-        self.logger.debug('Sending %s Ticket: %s', self.ReceptionistAddr, msgDict)
-        self.send(msgDict, self.ReceptionistAddr)
+        self.logger.debug('Sending %s Ticket: %s', self.sucessor_address, msgDict)
+        self.send(msgDict, self.sucessor_address)
 
     def deliverOrder(self,args,address):
 
