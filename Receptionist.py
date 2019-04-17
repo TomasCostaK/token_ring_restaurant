@@ -6,6 +6,7 @@ import socket
 import uuid
 import logging
 import queue
+import utils.py
 # import argparse
 import threading
 from Node import Node
@@ -62,18 +63,20 @@ class Receptionist(Node):
     def run(self):
         done = False
         while not done:
-            p, addr = self.recv()
-            if p is not None:
-                o = pickle.loads(p)
-                self.logger.debug('Received Object: %s', o)
-                if o['method'] == 'TOKEN' and o['args']['args']['idDestino']==self.own_id: #vamos enviar o objeto todo e usamos no args do method:token
-                    self.logger.debug("This token is for me")
-                    if o['args']['method']=='ORDER':
-                        self.receiveRequest(o['args'])
-                    #Verifica sempre se há comida para pedir
-                    self.askFoodCook(o['args'])
-
-
+            foodRequest = commsThread.getInQueue()
+            if foodRequest is not None:
+                self.logger.debug('Got request: %s', foodRequest)
+                client_address=foodRequest['args']['client_addr']
+                orderTicket = uuid.uuid1()
+                msg={'method':'TOKEN','args':
+                    {'method':'COOK', 'args': 
+                    {'id': self.node_table['Chef'], 'order': foodRequest['args']['order'], 'client_addr':request['args']['order'], 'orderTicket': orderTicket }}}
+                commsThread.putOutQueue()
+                self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket}) #warn client the order is confirmed
+                self.logger.debug("Put %s in the out queue")
+                work()
+            else:
+                work()
 def main():
     recept = Receptionist(1, ('localhost', 5001), 0, ('localhost', 5000))
     recept.run()

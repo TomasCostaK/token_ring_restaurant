@@ -22,7 +22,8 @@ class Node(threading.Thread):
         self.root_address = root_address  
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
-        self.logger = logging.getLogger("Node {}".format(self.own_id))
+        self.logger = logging.getLogger("Node {}".format(self.id))
+        self.node_table = dict()
 
     def send(self, address, o):
         p = pickle.dumps(o)
@@ -41,9 +42,10 @@ class Node(threading.Thread):
 
     def neighbor_advertise(self):
         self.logger.debug('Advertising to neighbors')
-        # send message to root to enter the ring
-        msg = { 'method' : "NODE_JOIN", 'args' : { 'own_id' : self.own_id, 'address' : self.address, 'placed' : False }};
-        self.send(self.root_address, msg)
+        if self.id != self.root_id:
+            # send message to root to enter the ring
+            msg = { 'method' : "NODE_JOIN", 'args' : { 'id' : self.id, 'address' : self.address, 'placed' : False }};
+            self.send(self.root_address, msg)
 
     def neighbor_ack(self, args):
         self.logger.debug('Acknowledging neigbour %s', args)
@@ -52,14 +54,15 @@ class Node(threading.Thread):
         placed = args['placed']
         # if advertised id is to be my next id, register it and notify successor
         # by sending NODE_JOIN message to my previous successor
-        if self.successor_id is None:
-            msg = { 'method' : "NODE_JOIN", 'args' : { 'own_id' : self.own_id, 'address' : self.address, 'placed' : True }};
+
+        if self.successor_id is None: # Node is alone
+            msg = { 'method' : "NODE_JOIN", 'args' : { 'id' : self.id, 'address' : self.address, 'placed' : True }};
             self.send(neighbor_address, msg)
             self.successor_id = neighbor_id
             self.successor_address = neighbor_address
             self.logger.debug('Successor: %s', self.successor_id)
-        elif neighbor_id < self.successor_id or self.successor_id == self.root_id:
-            msg = { 'method' : "NODE_JOIN", 'args' : { 'own_id' : self.successor_id, 'address' : self.successor_address, 'placed' : True }};
+        elif (neighbor_id > self.id and neighbor_id < self.successor_id) or (self.successor_id < self.id and (neighbor_id < self.successor_id or neighbor_id > self.id)):
+            msg = { 'method' : "NODE_JOIN", 'args' : { 'id' : self.successor_id, 'address' : self.successor_address, 'placed' : True }};
             self.send(neighbor_address, msg)
             self.successor_id = neighbor_id
             self.successor_address = neighbor_address
@@ -68,6 +71,37 @@ class Node(threading.Thread):
             if not placed:
                 msg = { 'method' : "NODE_JOIN", 'args' : { 'own_id' : neighbor_id, 'address' : neighbor_address, 'placed' : False }};
                 self.send(self.successor_address, msg)
+
+    def print_ring(self):
+        self.logger.debug('%s > %s', self.id, self.successor_id)
+        if self.successor_id == self.root_id:
+            return 0
+        msg = { 'method' : 'PRINT_RING' }
+        self.send(self.successor_address, msg)
+
+    def print_table(self):
+        self.logger.debug('%s', self.node_table)
+        if self.successor_id == self.root_id:
+            return 0
+        msg = { 'method' : 'PRINT_TABLE' }
+        self.send(self.successor_address, msg)
+
+
+    def propagate_table(self, args):
+        self.node_table = args['table'] # update my table with the one recieved
+        rounds = args['rounds']
+        if self.id == self.root_id: # if we are at root, we've made a lap
+            rounds+=1
+            if rounds > 2: # stop propagating
+                return
+        if self.id in self.node_table: # table is already built and just need to propagate it
+            msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : self.node_table , 'rounds' : rounds } }
+            self.send(self.successor_address, msg)
+        else: # need to update the table with my id and propagate it
+            self.node_table[self.id] = self.__class__.__name__
+            msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : self.node_table , 'rounds' : rounds } }
+            self.send(self.successor_address, msg)
+
 
     def run(self):
         self.socket.bind(self.address)
@@ -82,4 +116,9 @@ class Node(threading.Thread):
                 self.logger.info('O: %s', o)
                 if o['method'] == 'NODE_JOIN':
                     self.neighbor_ack(o['args'])
-
+                elif o['method'] == 'PRINT_RING':
+                    self.print_ring()
+                elif o['method'] == 'PRINT_TABLE':
+                    self.print_table()
+                elif o['method'] == 'NODE_DISCOVERY':
+                    self.propagate_table(o['args'])
