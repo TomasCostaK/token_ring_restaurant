@@ -43,7 +43,7 @@ class Receptionist(Node):
                     self.print_table()
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
-                elif o['method'] == 'TOKEN' and o['args']['args']['idDestino']==self.own_id: # send to worker
+                elif o['method'] == 'TOKEN' and o['args']['args']['id']==self.own_id: # send to worker
                     queueIn.put(o['args'])
                 else: # send to next
                     self.send(self.sucessor_addr, o)

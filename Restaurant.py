@@ -42,7 +42,7 @@ class Restaurant(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']['args']['idDestino']==self.own_id:
+                    if o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
                     else:
                         self.send(self.sucessor_addr, o)

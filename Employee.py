@@ -42,7 +42,7 @@ class Employee(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']['args']['idDestino']==self.own_id:
+                    if o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
                     else:
                         self.send(self.sucessor_addr, o)
@@ -50,20 +50,25 @@ class Employee(Node):
 class Worker(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
+        self.queueDone = queue.Queue()
 
     def run(self):
         done = False
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-                self.logger.debug('Going to deliver: %s', foodRequest)
-                #change here
-                orderToCook = foodRequest['args']['order']
-                msg={'method':'TOKEN','args':
-                    {'method':'DELIVER_ORDER', 'args': 
-                    {'id': self.node_table['Restaurant'], 'order': foodRequest['args']['order'], 'client_addr':request['args']['order'], 'orderTicket': orderTicket }}}
-                queueOut.get()
-                self.logger.debug("Put %s in the out queue")
+                #o cliente esta pronto a ir buscar
+                if foodRequest['method']=='PICKUP':
+                self.logger.debug('Client %s is waiting to pickup.', foodRequest['args']['orderTicket'])
+                    while True:
+                        if foodRequest['args']['orderTicket'] in queueDone:
+                            #enviar pela socket o pedido - self.sock.sendto(foodRequest['args']['cliente_addr'],pickle.loads("Recebi pedido %s", foodRequest['args']['orderTicket']))
+                            break
+
+                #caso a comida esteja pronta
+                elif foodRequest['method']=='ORDER_DONE':
+                    queueDone.put(foodRequest['args']['orderTicket'])
+                    self.logger.debug('Food for %s is done.', foodRequest['args']['orderTicket'])
                 work()
             else:
                 work()
