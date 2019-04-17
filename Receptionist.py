@@ -11,23 +11,19 @@ import threading
 from Node import Node
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
 class Receptionist(Node):
-    def __init__(self, own_id, address, root_id, root_address,timeout=3):
-        super().__init__(1, address, root_id, root_address, timeout=3)
-        self.queueIn = queue.Queue
-        self.queueOut = queue.Queue
-        self.sucessor_addr = ('locahost', 5002)
-        self.sucessor_id = 2
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.settimeout(timeout)
-        self.socket.bind((self.address))
-        self.logger = logging.getLogger("Rececionista {}".format(self.own_id))
+    def __init__(self, own_id, address, root_id, root_address):
+        super().__init__(own_id, address, root_id, root_address)
+        self.queueIn = queue.Queue()
+        self.queueOut = queue.Queue()
+        # self.sucessor_addr = ('locahost', 5002)
+        # self.sucessor_id = 2
+        self.logger = logging.getLogger("Receptionist {}".format(self.own_id))
 
-    #Acknowledge pedido
-    def receiveRequest(self,objeto): 
+    def receiveRequest(self,objeto): #Acknowledge pedido
         # adicionar a fila de pedidos a entregar ao cook, ex msg: {'method': 'ORDER', 'args': {'hamburger': 1, 'idDestino': 1}}
         objeto['args']['idDestino']=self.sucessor_id
         msg = {'method':'ORDER_RECVD', 'args': str(uuid.uuid1())} #send clients unique ticket
@@ -42,31 +38,27 @@ class Receptionist(Node):
     def askFoodCook(self,args):
         if args=='': #esta vazio podemos usar
             pass
-            
-
-    def send(self, o, address):
-        p = pickle.dumps(o)
-        self.socket.sendto(p, address)
-
-    def recv(self):
-        try:
-            p, addr = self.socket.recvfrom(1024)
-        except socket.timeout:
-            return None, None
-        else:
-            if len(p) == 0:
-                return None, addr
-            else:
-                return p, addr
 
     def run(self):
+        self.socket.bind(self.address)
+
+        self.neighbor_advertise()
+
         done = False
         while not done:
             p, addr = self.recv()
             if p is not None:
                 o = pickle.loads(p)
-                self.logger.debug('Received Object: %s', o)
-                if o['method'] == 'TOKEN' and o['args']['args']['idDestino']==self.own_id: #vamos enviar o objeto todo e usamos no args do method:token
+                self.logger.debug('O: %s', o)
+                if o['method'] == 'NODE_JOIN':
+                    self.neighbor_ack(o['args'])
+                elif o['method'] == 'PRINT_RING':
+                    self.print_ring()
+                elif o['method'] == 'PRINT_TABLE':
+                    self.print_table()
+                elif o['method'] == 'NODE_DISCOVERY':
+                    self.propagate_table(o['args'])   
+                elif o['method'] == 'TOKEN' and o['args']['args']['idDestino']==self.own_id: #vamos enviar o objeto todo e usamos no args do method:token
                     self.logger.debug("This token is for me")
                     if o['args']['method']=='ORDER':
                         self.receiveRequest(o['args'])
@@ -74,9 +66,9 @@ class Receptionist(Node):
                     self.askFoodCook(o['args'])
 
 
-def main():
-    recept = Receptionist(1, ('localhost', 5001), 0, ('localhost', 5000))
-    recept.run()
+# def main():
+#     recept = Receptionist(1, ('localhost', 5001), 0, ('localhost', 5000))
+#     recept.run()
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
