@@ -11,83 +11,59 @@ import threading
 from Node import Node
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
 class Restaurant(Node):
-    def __init__(self, own_id, address, root_id, root_address,timeout=3):
-        super().__init__(0, address, root_id, root_address)
-        self.queueIn = queue.Queue
-        self.queueOut = queue.Queue
-        self.queueGrill = queue.Queue
-        self.queueDrinks = queue.Queue
-        self.queueFries = queue.Queue
-        #HardcodedAddress do rececionista
-        self.sucessor_address = ('localhost', 5001)
-        self.sucessor_id = 1
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.settimeout(timeout)
-        self.socket.bind((self.address))
-        self.logger = logging.getLogger("Rececionista {}".format(self.own_id))
-
-    def receiveRequest(self,objeto,clientAddr): 
-        #if method == ORDER (vem do client)
-        self.logger.debug('Got from client')
-        objeto['args']['idDestino']=self.sucessor_id
-        objeto['args']['clientAddr']=clientAddr
-        #responder com ticket para o cliente mais tarde dar pickup
-        msgDict = {'method': 'TOKEN', 'args': objeto}
-        #self.send(p, addr)
-        self.logger.debug('Sending %s Ticket: %s', self.sucessor_address, msgDict)
-        self.send(msgDict, self.sucessor_address)
-
-    def deliverOrder(self,args,address):
-
-        msgDict = {'method': 'FOOD_DELIVERED', 'args': str(uuid.uuid1())}
-        #self.send(p, addr)
-        self.logger.debug('Sending %s food to client with ticket: %s', address ,msgDict['args'])
-        self.send(msgDict, address)
-
-    def grillRequest(self,args): #if grillReq
-        pass
-
-    def fryRequest(self,args): #if foodReq
-        pass
-
-    def drinkRequest(self,args): #if drinkReq
-        pass
-
-    def send(self, o, address):
-        p = pickle.dumps(o)
-        self.socket.sendto(p, address)
-
-    def recv(self):
-        try:
-            p, addr = self.socket.recvfrom(1024)
-        except socket.timeout:
-            return None, None
-        else:
-            if len(p) == 0:
-                return None, addr
-            else:
-                return p, addr
+    def __init__(self, own_id, address, root_id, root_address):
+        super().__init__(own_id, address, root_id, root_address)
+        global queueIn = queue.Queue()
+        global queueOut = queue.Queue()
+        w = Worker()
+        w.start()
+        self.logger = logging.getLogger("Restaurant {}".format(self.own_id))
 
     def run(self):
+        self.socket.bind(self.address)
+        self.neighbor_advertise()
+
         done = False
         while not done:
             p, addr = self.recv()
             if p is not None:
                 o = pickle.loads(p)
-                self.logger.debug('Received O: %s', o)
-                if o['method'] == 'ORDER': #vamos enviar o objeto todo e usamos no args do method:token
-                    self.receiveRequest(o,addr)
-                if o['method'] == 'PICKUP':
-                    self.deliverOrder(o['args'],addr)
+                self.logger.debug('O: %s', o)
+                if o['method'] == 'NODE_JOIN':
+                    self.neighbor_ack(o['args'])
+                elif o['method'] == 'PRINT_RING':
+                    self.print_ring()
+                elif o['method'] == 'PRINT_TABLE':
+                    self.print_table()
+                elif o['method'] == 'NODE_DISCOVERY':
+                    self.propagate_table(o['args'])   
+                elif o['method'] == 'TOKEN': # send to worker
+                    if o['args']['args']['idDestino']==self.own_id:
+                        queueIn.put(o['args'])
+                    else:
+                        self.send(self.sucessor_addr, o)
 
+class Worker(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
 
-def main():
-    rest = Restaurant(0, ('localhost', 5000), 0, ('localhost', 5000))
-    rest.run()
-
-if __name__ == '__main__':
-    main()
+    def run(self):
+        done = False
+        while not done:
+            foodRequest = queueIn.get()
+            if foodRequest is not None:
+                self.logger.debug('Going to : %s', foodRequest)
+                #change here
+                orderToCook = foodRequest['args']['order']
+                msg={'method':'TOKEN','args':
+                    {'method':'DELIVER_ORDER', 'args': 
+                    {'id': self.node_table['Restaurant'], 'order': foodRequest['args']['order'], 'client_addr':request['args']['order'], 'orderTicket': orderTicket }}}
+                queueOut.get()
+                self.logger.debug("Put %s in the out queue")
+                work()
+            else:
+                work()
