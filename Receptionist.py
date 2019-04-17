@@ -17,27 +17,11 @@ logging.basicConfig(level=logging.DEBUG,
 class Receptionist(Node):
     def __init__(self, own_id, address, root_id, root_address):
         super().__init__(own_id, address, root_id, root_address)
-        self.queueIn = queue.Queue()
-        self.queueOut = queue.Queue()
-        # self.sucessor_addr = ('locahost', 5002)
-        # self.sucessor_id = 2
+        global queueIn = Queue()
+        global queueOut = Queue()
+        w = Worker()
+        w.start()
         self.logger = logging.getLogger("Receptionist {}".format(self.own_id))
-
-    def receiveRequest(self,objeto): #Acknowledge pedido
-        # adicionar a fila de pedidos a entregar ao cook, ex msg: {'method': 'ORDER', 'args': {'hamburger': 1, 'idDestino': 1}}
-        objeto['args']['idDestino']=self.sucessor_id
-        msg = {'method':'ORDER_RECVD', 'args': str(uuid.uuid1())} #send clients unique ticket
-        self.logger.debug("Received: %s , order is now in the queue", objeto['args'])
-        self.queueOut.put(objeto,False)
-        msgDict = {'method': 'TOKEN', 'args': ''}
-        #Enviar para o cliente a dizer que recebeu
-        self.send(msg, objeto['args']['clientAddr'])
-        #Enviar o token vazio para dizer que pode ser usado
-        self.send(msgDict, self.sucessor_addr)
-
-    def askFoodCook(self,args):
-        if args=='': #esta vazio podemos usar
-            pass
 
     def run(self):
         self.socket.bind(self.address)
@@ -58,17 +42,32 @@ class Receptionist(Node):
                     self.print_table()
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
-                elif o['method'] == 'TOKEN' and o['args']['args']['idDestino']==self.own_id: #vamos enviar o objeto todo e usamos no args do method:token
-                    self.logger.debug("This token is for me")
-                    if o['args']['method']=='ORDER':
-                        self.receiveRequest(o['args'])
-                    #Verifica sempre se há comida para pedir
-                    self.askFoodCook(o['args'])
+                elif o['method'] == 'TOKEN' and o['args']['args']['idDestino']==self.own_id: # send to worker
+                    queueIn.put(o['args'])
+                else: # send to next
+                    self.send(self.sucessor_addr, o)
 
+class Worker(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
 
-# def main():
-#     recept = Receptionist(1, ('localhost', 5001), 0, ('localhost', 5000))
-#     recept.run()
+    def receiveRequest(self,objeto): #Acknowledge pedido
+        # adicionar a fila de pedidos a entregar ao cook, ex msg: {'method': 'ORDER', 'args': {'hamburger': 1, 'idDestino': 1}}
+        objeto['args']['idDestino']=self.sucessor_id
+        msg = {'method':'ORDER_RECVD', 'args': str(uuid.uuid1())} #send clients unique ticket
+        self.logger.debug("Received: %s , order is now in the queue", objeto['args'])
+        self.queueOut.put(objeto,False)
+        msgDict = {'method': 'TOKEN', 'args': ''}
+        #Enviar para o cliente a dizer que recebeu
+        self.send(msg, objeto['args']['clientAddr'])
+        #Enviar o token vazio para dizer que pode ser usado
+        self.send(msgDict, self.sucessor_addr)
 
-# if __name__ == '__main__':
-#     main()
+    def askFoodCook(self,args):
+        if args=='': #esta vazio podemos usar
+            pass
+
+    def run(self):
+        while True:
+            job = queueIn.get()
+            #do something
