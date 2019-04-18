@@ -42,10 +42,15 @@ class Employee(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']['args']['id']==self.own_id:
+                    if o['args']=='EMPTY':
+                        if queueOut.empty() == False:
+                            self.send(self.sucessor_addr, queueOut.get())
+                        else:  #esta parte?
+                            self.send(self.sucessor_addr, {'method':'TOKEN','args':'EMPTY'})
+                    #caso seja para esta pessoa
+                    elif o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
-                    else:
-                        self.send(self.sucessor_addr, o)
+
 
 class Worker(threading.Thread):
     def __init__(self):

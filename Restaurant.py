@@ -23,6 +23,10 @@ class Restaurant(Node):
         w.start()
         self.logger = logging.getLogger("Restaurant {}".format(self.own_id))
 
+    def send(self, address, o):
+        p = pickle.dumps(o)
+        self.socket.sendto(p, address)
+
     def run(self):
         self.socket.bind(self.address)
         self.neighbor_advertise()
@@ -42,10 +46,15 @@ class Restaurant(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']['args']['id']==self.own_id:
+                    if o['args']=='EMPTY':
+                        if queueOut.empty() == False:
+                            self.send(self.sucessor_addr, queueOut.get())
+                        else:  #esta parte?
+                            self.send(self.sucessor_addr, {'method':'TOKEN','args':'EMPTY'})
+                    #caso seja para esta pessoa
+                    elif o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
-                    else:
-                        self.send(self.sucessor_addr, o)
+
 
 class Worker(threading.Thread):
     def __init__(self):
@@ -58,12 +67,6 @@ class Worker(threading.Thread):
             if foodRequest is not None:
                 self.logger.debug('Going to : %s', foodRequest)
                 #change here
-                orderToCook = foodRequest['args']['order']
-                msg={'method':'TOKEN','args':
-                    {'method':'DELIVER_ORDER', 'args': 
-                    {'id': self.node_table['Restaurant'], 'order': foodRequest['args']['order'], 'client_addr':request['args']['order'], 'orderTicket': orderTicket }}}
-                queueOut.get()
-                self.logger.debug("Put %s in the out queue")
                 work()
             else:
                 work()
