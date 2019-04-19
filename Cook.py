@@ -48,9 +48,12 @@ class Cook(Node):
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
                     if o['args']=='EMPTY':
-                        if queueOut.empty() == False:
-                            self.send(self.sucessor_addr, queueOut.get())
-                        else:  #esta parte?
+                        nextMessage = queueOut.get()
+                        #verifica se tem que enviar para alguem
+                        if nextMessage != None:
+                            self.send(self.sucessor_addr, {'method':'TOKEN', 'args':nextMessage })
+                            self.logger.debug('Sending Token', nextMessage)
+                        else:  
                             self.send(self.sucessor_addr, o)
                     #caso seja para esta pessoa
                     elif o['args']['args']['id']==self.own_id:
