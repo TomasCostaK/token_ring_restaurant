@@ -43,8 +43,17 @@ class Employee(Node):
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
                     if o['args']=='EMPTY':
-                        if queueOut.empty() == False:
-                            self.send(self.sucessor_addr, queueOut.get())
+                        nextMessage = queueOut.get()
+                        #assim so vai responder ao cliente quando o token lhe chegar vazio
+                        if nextMessage != None:
+                            if nextMessage['method']=='PICKUP': #enviar pra cliente caso method seja deliver
+                                self.send(nextMessage['args']['cliente_addr'], pickle.loads(nextMessage['args']['orderTicket']))
+                                self.logger.debug('Sending client %s food', nextMessage['args']['orderTicket'])
+
+                            else: #else propaga o token
+                                self.send(self.sucessor_addr, nextMessage)
+                                self.logger.debug('Sending Token', nextMessage)
+
                         else:  #esta parte?
                             self.send(self.sucessor_addr, {'method':'TOKEN','args':'EMPTY'})
                     #caso seja para esta pessoa
@@ -67,7 +76,7 @@ class Worker(threading.Thread):
                 self.logger.debug('Client %s is waiting to pickup.', foodRequest['args']['orderTicket'])
                     while True:
                         if foodRequest['args']['orderTicket'] in queueDone:
-                            #enviar pela socket o pedido - self.sock.sendto(foodRequest['args']['cliente_addr'],pickle.loads("Recebi pedido %s", foodRequest['args']['orderTicket']))
+                            queueDone.put(foodRequest)                           
                             break
 
                 #caso a comida esteja pronta
