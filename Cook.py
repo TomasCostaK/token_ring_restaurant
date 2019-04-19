@@ -58,6 +58,10 @@ class Cook(Node):
                     #caso seja para esta pessoa
                     elif o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
+                        
+                elif o['method'] == 'ORDER':
+                    self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
+                    queueIn.put(o)
 
 class Worker(threading.Thread):
     def __init__(self):
