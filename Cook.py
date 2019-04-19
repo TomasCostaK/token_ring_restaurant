@@ -51,7 +51,7 @@ class Cook(Node):
                         if queueOut.empty() == False:
                             self.send(self.sucessor_addr, queueOut.get())
                         else:  #esta parte?
-                            self.send(self.sucessor_addr, {'method':'TOKEN','args':'EMPTY'})
+                            self.send(self.sucessor_addr, o)
                     #caso seja para esta pessoa
                     elif o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
@@ -80,16 +80,14 @@ class Worker(threading.Thread):
                     #cook here - basicamente pedir acesso ao restaurante e ver se o equipamento que manda esta dentro de uma lista
                     # se estiver pode usar, e tira o da lista, so quando acaba de usar e que manda o 
                     self.logger.debug('Cooking', foodRequest['args']['orderTicket'])
-                    msg={'method':'TOKEN','args':
-                        {'method':'EQPT_USED', 'args': 
-                        {'id': self.node_table['Restaurant'] ,'client_addr': foodRequest['args']['client_addr'], 'orderTicket': orderTicket }}}
+                    msg={'method':'EQPT_USED', 'args': 
+                        {'id': self.node_table['Restaurant'] ,'client_addr': foodRequest['args']['client_addr'], 'orderTicket': orderTicket }}
                     queueOut.put(msg)
-                    self.logger.debug('Going to use the equipment: %s', "") #mudar isto
+                    self.logger.debug('Going to use the equipment:') #mudar isto
 
                     if allfoodisdone:
-                        msg={'method':'TOKEN','args':
-                            {'method':'ORDER_DONE', 'args': 
-                            {'id': self.node_table['Employee'] ,'client_addr': foodRequest['args']['client_addr'], 'orderTicket': orderTicket }}}
+                        msg={'method':'ORDER_DONE', 'args': 
+                            {'id': self.node_table['Employee'] ,'client_addr': foodRequest['args']['client_addr'], 'orderTicket': orderTicket }}
                         queueOut.put(msg)
                         self.logger.debug('Client %s food is ready to pickup.', foodRequest['args']['orderTicket'])
             else:

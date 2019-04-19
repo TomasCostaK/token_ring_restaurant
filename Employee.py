@@ -55,7 +55,7 @@ class Employee(Node):
                                 self.logger.debug('Sending Token', nextMessage)
 
                         else:  #esta parte?
-                            self.send(self.sucessor_addr, {'method':'TOKEN','args':'EMPTY'})
+                            self.send(self.sucessor_addr, o)
                     #caso seja para esta pessoa
                     elif o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])

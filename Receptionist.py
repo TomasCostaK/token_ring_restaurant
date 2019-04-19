@@ -15,6 +15,11 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
+# Chef
+# Restaurant
+# Employee
+# Receptionist
+
 class Receptionist(Node):
     def __init__(self, own_id, address, root_id, root_address):
         super().__init__(own_id, address, root_id, root_address)
@@ -49,15 +54,20 @@ class Receptionist(Node):
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
                     if o['args']=='EMPTY':
-                        if queueOut.empty() == False:
-                            self.send(self.sucessor_addr, queueOut.get())
-                        else: 
-                            self.send(self.sucessor_addr, {'method':'TOKEN','args':'EMPTY'})
+                        nextMessage = queueOut.get()
+                        #verifica se tem que enviar para alguem
+                        if nextMessage != None:
+                            self.send(self.sucessor_addr, {'method':'TOKEN', 'args':nextMessage })
+                            self.logger.debug('Sending Token', nextMessage)
+                        else:  
+                            self.send(self.sucessor_addr, o)
                     #caso seja para esta pessoa
                     elif o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
+
                 elif o['method'] == 'ORDER':
                     self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
+                    queueIn.put(o)
 
 
 
@@ -71,12 +81,9 @@ class Worker(threading.Thread):
             foodRequest = queueIn.get()
             if foodRequest is not None:
                 self.logger.debug('Got request: %s', foodRequest)
-                client_address=foodRequest['args']['client_addr']
                 orderTicket = uuid.uuid1()
-                msg={'method':'TOKEN','args':
-                    {'method':'COOK', 'args': 
-                    {'id': self.node_table['Chef'], 'order': foodRequest['args']['order'], 'client_addr':request['args']['client_addr'], 'orderTicket': orderTicket }}}
-                queueOut.put()
+                msg={'method':'COOK', 'args': {'id': self.node_table['Chef'], 'order': foodRequest['args']['order'], 'client_addr':foodRequest['args']['client_addr'], 'orderTicket': orderTicket }}
+                queueOut.put(msg)
                 #warn client the order is confirmed
                 self.logger.debug("Put %s in the out queue")
                 work()

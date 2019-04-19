@@ -50,7 +50,7 @@ class Restaurant(Node):
                         if queueOut.empty() == False:
                             self.send(self.sucessor_addr, queueOut.get())
                         else:  #esta parte?
-                            self.send(self.sucessor_addr, {'method':'TOKEN','args':'EMPTY'})
+                            self.send(self.sucessor_addr, o)
                     #caso seja para esta pessoa
                     elif o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
