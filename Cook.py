@@ -46,20 +46,24 @@ class Cook(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']['args']['id']==self.own_id:
+                    if o['args']['dest_id']==self.own_id:
+                        self.logger.debug('Sending object to Worker Thread')
                         queueIn.put(o['args'])
                     else:  
-                        self.send(self.sucessor_addr, o)
-                elif o['method'] == 'ORDER':
-                    self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
-                    queueIn.put(o)
+                        self.send(self.successor_address, o)
+                # elif o['method'] == 'ORDER':
+                #     self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
+                #     queueIn.put(o)
 
             if not queueOut.empty():
-                nextMessage = queueOut.get()
                 #verifica se tem que enviar para alguem
+                nextMessage = queueOut.get()
                 if nextMessage != None:
-                    self.send(self.sucessor_addr, {'method':'TOKEN', 'args':nextMessage })
-                    self.logger.debug('Sending Token', nextMessage)
+                    # wrap in TOKEN
+                    msg = { 'method' : 'TOKEN', 'args' : nextMessage }
+                    msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
+                    self.send(self.successor_address, msg)
+                    self.logger.debug('Sending Token', msg)
 
 class Worker(threading.Thread):
     def __init__(self):
@@ -67,35 +71,50 @@ class Worker(threading.Thread):
         global queueIn
         global queueOut
 
+    def wait_on_item(self, food):
+        # wait until acces is granted to equipment needed
+        answer = queueIn.get()
+        if answer['method'] == 'ACCESS_GRANTED' and answer['args']['equipment'] == food:
+            # access granted to equipment
+            work()
+            return
+        else: # put msg back in queueIn to be processed again
+            queueIn.put(answer)
+            self.wait_on_item(food)
+
+    def cook_item(self, food):
+        msg = {'method':'EQPT_REQ', 
+               'args': { 'dest': 'Restaurant' ,
+                         'equipment' : food }}
+        queueOut.put(msg)
+        self.wait_on_item(food)
+        # notify restaurant that equipment is free
+        msg = { 'method' : 'EQPT_USED', 
+                'args' : { 'dest' : 'Restaurant', 
+                           'equipment': food }}
+        queueOut.put(msg)
+
+
+    def cook(self, args):
+        for food in args['order']: 
+            for i in range(int(food)):
+                self.cook_item(food)
+                
+        # when all items from request are ready, send message to Employee            
+        msg = {'method' : 'ORDER_DONE', 
+             'args' : { 'dest': 'Employee' ,
+                        'client_addr': foodRequest['args']['client_addr'],
+                        'orderTicket': foodRequest['args']['orderTicket'] }}
+        queueOut.put(msg)
+
+
     def run(self):
         done = False
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-                #o cliente esta pronto a ir buscar
+                # o cliente esta pronto a ir buscar
                 if foodRequest['method']=='COOK':
-                    for comida in foodRequest['args']['order']:  #enviar por cada tipo de comida mas testar so um por agora
-                        self.logger.debug('Asking permission to use equipments.')
-                        {'method':'TOKEN','args':
-                        {'method':'EQPT_REQ', 'args': 
-                        {'id': self.node_table['Restaurant'] ,'client_addr': foodRequest['args']['client_addr'], 'equipamento':comida, 'orderTicket': orderTicket }}}
-                        queueOut.put(msg)
-
-                #caso a comida esteja pronta
-                elif foodRequest['method']=='ACCESS_GRANTED':
-                    work()
-                    #cook here - basicamente pedir acesso ao restaurante e ver se o equipamento que manda esta dentro de uma lista
-                    # se estiver pode usar, e tira o da lista, so quando acaba de usar e que manda o 
-                    self.logger.debug('Cooking', foodRequest['args']['orderTicket'])
-                    msg={'method':'EQPT_USED', 'args': 
-                        {'id': self.node_table['Restaurant'] ,'client_addr': foodRequest['args']['client_addr'], 'orderTicket': orderTicket }}
-                    queueOut.put(msg)
-                    self.logger.debug('Going to use the equipment:') #mudar isto
-
-                    if allfoodisdone:
-                        msg={'method':'ORDER_DONE', 'args': 
-                            {'id': self.node_table['Employee'] ,'client_addr': foodRequest['args']['client_addr'], 'orderTicket': orderTicket }}
-                        queueOut.put(msg)
-                        self.logger.debug('Client %s food is ready to pickup.', foodRequest['args']['orderTicket'])
+                    self.cook(foodRequest['args'])
             else:
                 work()

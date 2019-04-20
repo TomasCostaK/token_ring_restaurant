@@ -45,13 +45,13 @@ class Employee(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']['args']['id']==self.own_id:
+                    if o['args']['dest_id']==self.own_id:
                         queueIn.put(o['args'])
                     else:
-                        self.send(self.sucessor_addr, o)
-                elif o['method'] == 'ORDER':
-                    self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
-                    queueIn.put(o)
+                        self.send(self.successor_address, o)
+                # elif o['method'] == 'ORDER':
+                #     self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
+                #     queueIn.put(o)
 
             if not queueOut.empty():
                 nextMessage = queueOut.get()
@@ -60,7 +60,7 @@ class Employee(Node):
                         self.send(nextMessage['args']['cliente_addr'], pickle.loads(nextMessage['args']['orderTicket']))
                         self.logger.debug('Sending client %s food', nextMessage['args']['orderTicket'])
                     else: #else propaga o token
-                        self.send(self.sucessor_addr, nextMessage)
+                        self.send(self.successor_address, nextMessage)
                         self.logger.debug('Sending Token', nextMessage)
 
 class Worker(threading.Thread):
@@ -77,14 +77,14 @@ class Worker(threading.Thread):
             if foodRequest is not None:
                 #o cliente esta pronto a ir buscar
                 if foodRequest['method']=='PICKUP':
-                    self.logger.debug('Client %s is waiting to pickup.', foodRequest['args']['orderTicket'])
+                    # self.logger.debug('Client %s is waiting to pickup.', foodRequest['args']['orderTicket'])
                     if foodRequest['args']['orderTicket'] in self.queueDone:
                         queueOut.put(foodRequest)                           
 
                 #caso a comida esteja pronta
                 elif foodRequest['method']=='ORDER_DONE':
                     self.queueDone.put(foodRequest['args']['orderTicket'])
-                    self.logger.debug('Food for %s is done.', foodRequest['args']['orderTicket'])
+                    # self.logger.debug('Food for %s is done.', foodRequest['args']['orderTicket'])
                 work()
             else:
                 work()

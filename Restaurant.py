@@ -44,18 +44,25 @@ class Restaurant(Node):
                     self.print_table()
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
-                elif o['method'] == 'TOKEN': # send to worker
+                elif o['method'] == 'TOKEN':                     
                     #caso seja para esta pessoa
-                    if o['args']['args']['id']==self.own_id:
-                        queueIn.put(o['args'])
-                    else:  #esta parte?
-                        self.send(self.sucessor_addr, o)
-                elif o['method'] == 'ORDER':
-                    self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
-                    queueIn.put(o)
+                    if o['args']['dest_id']==self.own_id:
+                        queueIn.put(o['args']) # send to worker
+                    else:
+                        self.send(self.successor_address, o)
+                elif o['method'] == 'ORDER': # need to wrap in TOKEN
+                    msg = { 'method' : 'TOKEN' , 
+                            'args' : { 'method' : o['method'], 
+                                       'args' : { 'client_addr' : addr, 
+                                                  'order' : o['args'] }, 
+                                       'dest_id' : self.node_table['Receptionist'] }}
+                    self.send(self.successor_address, msg)
+                    # queueIn.put(msg)
+                    # self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
+                    # queueIn.put(o)
 
             if queueOut.empty() == False:
-                self.send(self.sucessor_addr, queueOut.get())
+                self.send(self.successor_address, queueOut.get())
 
 class Worker(threading.Thread):
     def __init__(self):
@@ -68,7 +75,7 @@ class Worker(threading.Thread):
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-                self.logger.debug('Going to : %s', foodRequest)
+                # self.logger.debug('Going to : %s', foodRequest)
                 #change here
                 work()
             else:

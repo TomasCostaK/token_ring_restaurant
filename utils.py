@@ -1,5 +1,8 @@
 # coding: utf-8
 import numpy as np
+import time
+import math
+import random
 
 RESTAURANT_ID = 0
 RECEPTIONIST_ID = 1
@@ -34,5 +37,7 @@ def contains_successor(identification, successor, node):
 
 def work():
     mu, sigma = 2, 0.5
-    s = np.random.normal(mu, sigma, 1000)
-    sleep(s)
+    # generate the number of seconds the work will take
+    seconds = math.fabs(random.gauss(mu, sigma))
+    # s = np.random.normal(mu, sigma, 1000)
+    time.sleep(seconds)

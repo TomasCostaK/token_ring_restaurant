@@ -4,6 +4,7 @@ import logging
 import time
 import socket
 import pickle
+import subprocess
 from Node import Node
 from Restaurant import Restaurant
 from Receptionist import Receptionist
@@ -68,6 +69,10 @@ def main(number_nodes):
     # Print the ring order for debug
     msg = { 'method' : 'PRINT_TABLE' }
     tsocket.sendto(pickle.dumps(msg), ('localhost', 5000))
+
+    time.sleep(5)
+
+    subprocess.run(['python3', 'client.py'])
 
     for node in ring:
         node.join()
