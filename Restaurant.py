@@ -67,15 +67,14 @@ class Restaurant(Node):
                     elif o['args']['dest_id']==self.own_id:
                         self.logger.debug('Sending object to Worker Thread')
                         queueIn.put(o['args'])
+                        msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
+                        self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
                     else:  
                         self.send(self.successor_address, o)
 
                     # queueIn.put(msg)
                     # self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
                     # queueIn.put(o)
-
-            if queueOut.empty() == False:
-                self.send(self.successor_address, queueOut.get())
 
 class Worker(threading.Thread):
     def __init__(self):
@@ -88,8 +87,8 @@ class Worker(threading.Thread):
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-                # self.logger.debug('Going to : %s', foodRequest)
-                #change here
-                work()
+
+                work(avg)
+
             else:
                 work()

@@ -72,6 +72,8 @@ class Receptionist(Node):
                     elif o['args']['dest_id']==self.own_id:
                         self.logger.debug('Sending object to Worker Thread')
                         queueIn.put(o['args'])
+                        msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
+                        self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
                         #caso nao esteja vazio e nao seja para ele
                     else:  
                         self.send(self.successor_address, o)

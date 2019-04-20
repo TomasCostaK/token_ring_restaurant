@@ -60,18 +60,12 @@ class Cook(Node):
                     elif o['args']['dest_id']==self.own_id:
                         self.logger.debug('Sending object to Worker Thread')
                         queueIn.put(o['args'])
+                        msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
+                        self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
                     else:  
                         self.send(self.successor_address, o)
 
-            if not queueOut.empty():
-                #verifica se tem que enviar para alguem
-                nextMessage = queueOut.get()
-                if nextMessage != None:
-                    # wrap in TOKEN
-                    msg = { 'method' : 'TOKEN', 'args' : nextMessage }
-                    msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
-                    self.send(self.successor_address, msg)
-                    self.logger.debug('Sending Token', msg)
+        
 
 class Worker(threading.Thread):
     def __init__(self):
