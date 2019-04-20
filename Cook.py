@@ -46,14 +46,22 @@ class Cook(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']['dest_id']==self.own_id:
+                    if o['args']=='EMPTY':
+                        if not queueOut.empty():
+                            nextMessage = queueOut.get()
+                            if nextMessage != None:
+                                # wrap in TOKEN
+                                msg = { 'method' : 'TOKEN', 'args' : nextMessage }
+                                msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
+                                self.send(self.successor_address, msg)
+                                self.logger.debug('Sending Token', msg)
+                        else:
+                            self.send(self.successor_address, o)
+                    elif o['args']['dest_id']==self.own_id:
                         self.logger.debug('Sending object to Worker Thread')
                         queueIn.put(o['args'])
                     else:  
                         self.send(self.successor_address, o)
-                # elif o['method'] == 'ORDER':
-                #     self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
-                #     queueIn.put(o)
 
             if not queueOut.empty():
                 #verifica se tem que enviar para alguem
