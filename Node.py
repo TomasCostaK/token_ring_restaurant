@@ -89,18 +89,18 @@ class Node(threading.Thread):
     def propagate_table(self, args):
         self.node_table = args['table'] # update my table with the one recieved
         rounds = args['rounds']
+        myname = self.__class__.__name__
         if self.own_id == self.root_id: # if we are at root, we've made a lap
             rounds+=1
             if rounds > 2: # stop propagating
                 return
-        if self.own_id in self.node_table: # table is already built and just need to propagate it
+        if myname in self.node_table: # table is already built and just need to propagate it
             msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : self.node_table , 'rounds' : rounds } }
             self.send(self.successor_address, msg)
         else: # need to update the table with my id and propagate it
-            self.node_table[self.own_id] = self.__class__.__name__
+            self.node_table[myname] = self.own_id
             msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : self.node_table , 'rounds' : rounds } }
             self.send(self.successor_address, msg)
-
 
     def run(self):
         self.socket.bind(self.address)

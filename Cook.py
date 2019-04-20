@@ -6,7 +6,7 @@ import socket
 import logging
 # import argparse
 import threading
-import utils
+from utils import work
 import queue
 from Node import Node
 
@@ -14,18 +14,17 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
+queueIn = queue.Queue()
+queueOut = queue.Queue()
+
 class Cook(Node):
     def __init__(self, own_id, address, root_id, root_address):
         super().__init__(own_id, address, root_id, root_address)
-        global queueIn = queue.Queue()
-        global queueOut = queue.Queue()
+        global queueIn
+        global queueOut
         w = Worker()
         w.start()
         self.logger = logging.getLogger("Cook {}".format(self.own_id))
-
-    def send(self, address, o):
-        p = pickle.dumps(o)
-        self.socket.sendto(p, address)
 
     def run(self):
         self.socket.bind(self.address)
@@ -47,25 +46,26 @@ class Cook(Node):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']=='EMPTY':
-                        nextMessage = queueOut.get()
-                        #verifica se tem que enviar para alguem
-                        if nextMessage != None:
-                            self.send(self.sucessor_addr, {'method':'TOKEN', 'args':nextMessage })
-                            self.logger.debug('Sending Token', nextMessage)
-                        else:  
-                            self.send(self.sucessor_addr, o)
-                    #caso seja para esta pessoa
-                    elif o['args']['args']['id']==self.own_id:
+                    if o['args']['args']['id']==self.own_id:
                         queueIn.put(o['args'])
-                        
+                    else:  
+                        self.send(self.sucessor_addr, o)
                 elif o['method'] == 'ORDER':
                     self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
                     queueIn.put(o)
 
+            if not queueOut.empty():
+                nextMessage = queueOut.get()
+                #verifica se tem que enviar para alguem
+                if nextMessage != None:
+                    self.send(self.sucessor_addr, {'method':'TOKEN', 'args':nextMessage })
+                    self.logger.debug('Sending Token', nextMessage)
+
 class Worker(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
+        global queueIn
+        global queueOut
 
     def run(self):
         done = False
