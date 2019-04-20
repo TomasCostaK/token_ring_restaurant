@@ -72,13 +72,16 @@ class Worker(threading.Thread):
         threading.Thread.__init__(self)
         global queueIn
         global queueOut
+        self.equipmentsTime = {'hamburger':3,'drinks':1,'fries':5}
+
 
     def wait_on_item(self, food):
         # wait until acces is granted to equipment needed
         answer = queueIn.get()
         if answer['method'] == 'ACCESS_GRANTED' and answer['args']['equipment'] == food:
             # access granted to equipment
-            work()
+            time = equipmentsTime['equipment']
+            work(time)
             return
         else: # put msg back in queueIn to be processed again
             queueIn.put(answer)

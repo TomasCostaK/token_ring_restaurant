@@ -81,14 +81,41 @@ class Worker(threading.Thread):
         threading.Thread.__init__(self)
         global queueIn
         global queueOut
+        queueWaiting = queue.Queue()
+        self.equipmentsDict = {'hamburger':0,'drinks':0,'fries':0}
+
+    def lockEquipment(self,args):
+        if not queueWaiting.empty():
+            queueWaiting.put(args)
+        else: #weird workaround? dpes this make sense?
+              #caso a fila esteja vazia atendemos logo este pedido, senao vemos os que estao na fila
+            if equipmentsDict[args['equipment']] == 0:
+                equipmentsDict[args['equipment']] = 1
+                msg ={'method':'ACCESS_GRANTED', 
+                        'args': { 'dest': 'Cook' ,
+                                  'equipment' : args['equipment'] }}
+                queueOut.put(msg)
+            else:
+                queueWaiting.put(args)
+                
+
+    def releaseEquipment(self,args):
+        #por o eqpt a 0 caso nao haja ninguem a usar
+        if queueWaiting.empty():
+            equipmentsDict[args['equipment']] = 0
+        else:
+            self.lockEquipment(queueWaiting.get())
 
     def run(self):
         done = False
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-
-                work(avg)
+                if foodRequest['method']=='EPQT_REQ':
+                    self.lockEquipment(foodRequest['args'])
+                
+                if foodRequest['method']=='EPQT_USED':
+                    self.releaseEquipment(foodRequest['args'])
 
             else:
                 work()
