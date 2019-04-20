@@ -44,12 +44,6 @@ class Restaurant(Node):
                     self.print_table()
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
-                elif o['method'] == 'TOKEN':                     
-                    #caso seja para esta pessoa
-                    if o['args']['dest_id']==self.own_id:
-                        queueIn.put(o['args']) # send to worker
-                    else:
-                        self.send(self.successor_address, o)
                 elif o['method'] == 'ORDER': # need to wrap in TOKEN
                     msg = { 'method' : 'TOKEN' , 
                             'args' : { 'method' : o['method'], 
@@ -57,6 +51,13 @@ class Restaurant(Node):
                                                   'order' : o['args'] }, 
                                        'dest_id' : self.node_table['Receptionist'] }}
                     self.send(self.successor_address, msg)
+                elif o['method'] == 'TOKEN':                     
+                    #caso seja para esta pessoa
+                    if o['args']['dest_id']==self.own_id:
+                        queueIn.put(o['args']) # send to worker
+                    else:
+                        self.send(self.successor_address, o)
+
                     # queueIn.put(msg)
                     # self.send(client_address,{'method':'ORDER_RECVD','args':orderTicket})
                     # queueIn.put(o)
