@@ -97,7 +97,7 @@ class Worker(threading.Thread):
 
     def cook(self, args):
         for food in args['order']: 
-            for i in range(int(food)):
+            for i in range(int(args['order'][food])):
                 self.cook_item(food)
                 
         # when all items from request are ready, send message to Employee            
