@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M:%S')
 
 class Node(threading.Thread):
-    def __init__(self, own_id, address, root_id, root_address, timeout=3):
+    def __init__(self, own_id, address, root_id, root_address, name='Node', timeout=3):
         threading.Thread.__init__(self)
         self.own_id = own_id
         self.address = address
@@ -21,6 +21,9 @@ class Node(threading.Thread):
         self.successor_address = None
         self.root_id = root_id
         self.root_address = root_address  
+        if name == 'Node':
+            name = self.__class__.__name__
+        self.name = name
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.own_id))
@@ -103,16 +106,15 @@ class Node(threading.Thread):
     def propagate_table(self, args):
         self.node_table = args['table'] # update my table with the one recieved
         rounds = args['rounds']
-        myname = self.__class__.__name__
         if self.own_id == self.root_id: # if we are at root, we've made a lap
             rounds+=1
             if rounds > 2: # stop propagating
                 return
-        if myname in self.node_table: # table is already built and just need to propagate it
+        if self.name in self.node_table: # table is already built and just need to propagate it
             msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : self.node_table , 'rounds' : rounds } }
             self.send(self.successor_address, msg)
         else: # need to update the table with my id and propagate it
-            self.node_table[myname] = self.own_id
+            self.node_table[self.name] = self.own_id
             msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : self.node_table , 'rounds' : rounds } }
             self.send(self.successor_address, msg)
 
@@ -137,8 +139,8 @@ class Node(threading.Thread):
                     self.propagate_table(o['args'])   
                 elif o['method'] == 'TOKEN': # send to worker
                     if o['args']=='EMPTY':
-                        if not queueOut.empty():
-                            nextMessage = queueOut.get()
+                        if not self.queueOut.empty():
+                            nextMessage = self.queueOut.get()
                             if nextMessage != None:
                                 # wrap in TOKEN
                                 msg = { 'method' : 'TOKEN', 'args' : nextMessage }
@@ -152,7 +154,7 @@ class Node(threading.Thread):
                             self.send(self.successor_address, o)
                     elif o['args']['dest_id']==self.own_id:
                         self.logger.debug('Sending object to Worker Thread')
-                        queueIn.put(o['args'])
+                        self.queueIn.put(o['args'])
                         msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
                         self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
                     else:  

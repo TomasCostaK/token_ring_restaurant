@@ -18,9 +18,9 @@ class Cook(threading.Thread):
     def __init__(self, own_id, address, root_id, root_address):
         threading.Thread.__init__(self)
         self.equipmentsTime = {'hamburger':3,'drinks':1,'fries':5}
-        self.node_comm = Node(own_id, address, root_id, root_address)
+        self.node_comm = Node(own_id, address, root_id, root_address, 'Cook')
         self.node_comm.start()
-        self.logger = logging.getLogger("Cook {}".format(self.own_id))
+        self.logger = logging.getLogger("Cook {}".format(self.node_comm.own_id))
 
     def wait_on_item(self, food):
         # wait until acces is granted to equipment needed
