@@ -51,8 +51,13 @@ class Employee(Node):
                             nextMessage = queueOut.get()
                             if nextMessage != None:
                                 if nextMessage['method']=='DELIVER': #enviar pra cliente caso method seja deliver
-                                    self.send(nextMessage['args']['client_addr'], nextMessage['args']['orderTicket'])
+                                    msg = { 'method':'DELIVER' ,
+                                            'args': { 'ticket': nextMessage['args']['orderTicket']
+                                            }}
+
+                                    clientAddress = nextMessage['args']['client_addr']
                                     self.logger.debug('Sending client %s food', nextMessage['args']['orderTicket'])
+                                    self.send(clientAddress, msg)
                                 else: #else propaga o token
                                     # wrap in TOKEN
                                     msg = { 'method' : 'TOKEN', 'args' : nextMessage }
@@ -62,7 +67,7 @@ class Employee(Node):
                         else:
                             self.send(self.successor_address, o)
                     elif o['args']['dest_id']==self.own_id:
-                        self.logger.debug('Sending %s object to Worker Thread', o['args'])
+                        self.logger.debug('Sending object to Worker Thread')
                         queueIn.put(o['args'])
                         msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
                         self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
@@ -81,6 +86,7 @@ class Worker(threading.Thread):
     def deliver(self, args):
         if any(orderLista == args['orderTicket'] for orderLista in self.queueDone):
             self.queueDone.remove(args['orderTicket'])
+            self.queueWaiting.remove(args['orderTicket'])
             msg = { 'method' : 'DELIVER',
                     'args' : args }
             queueOut.put(msg)  
@@ -89,7 +95,6 @@ class Worker(threading.Thread):
 
     def wait_in_line(self,args):
         if not self.deliver(args):
-            print("Meu pedido ainda nao chegou")
             self.queueWaiting.append(args['order']['orderTicket'])
 
 
@@ -108,9 +113,6 @@ class Worker(threading.Thread):
                 #caso a comida esteja pronta
                 elif foodRequest['method']=='ORDER_DONE':
                     self.queueDone.append(foodRequest['args']['orderTicket'])
-                    print(self.queueDone)
-                    print(self.queueWaiting)
-                    print(foodRequest['args'])
                     self.deliver(foodRequest['args'])
                 work()
             else:
