@@ -4,6 +4,7 @@ import time
 import pickle
 import socket
 import logging
+import queue
 # import argparse
 import threading
 
@@ -24,6 +25,8 @@ class Node(threading.Thread):
         self.socket.settimeout(timeout)
         self.logger = logging.getLogger("Node {}".format(self.own_id))
         self.node_table = dict()
+        self.queueIn = queue.Queue()
+        self.queueOut = queue.Queue()
 
     def send(self, address, o):
         p = pickle.dumps(o)
@@ -39,6 +42,17 @@ class Node(threading.Thread):
                 return None, addr
             else:
                 return p, addr
+
+    def put_queueIn(self, o):
+        self.queueIn.put(o)
+
+    def get_queueIn(self):
+        if self.queueIn.empty():
+            return 0
+        return self.queueIn.get()
+
+    def put_queueOut(self, o):
+        self.queueIn.put(o)
 
     def neighbor_advertise(self):
         self.logger.debug('Advertising to neighbors')
@@ -120,4 +134,28 @@ class Node(threading.Thread):
                 elif o['method'] == 'PRINT_TABLE':
                     self.print_table()
                 elif o['method'] == 'NODE_DISCOVERY':
-                    self.propagate_table(o['args'])
+                    self.propagate_table(o['args'])   
+                elif o['method'] == 'TOKEN': # send to worker
+                    if o['args']=='EMPTY':
+                        if not queueOut.empty():
+                            nextMessage = queueOut.get()
+                            if nextMessage != None:
+                                # wrap in TOKEN
+                                msg = { 'method' : 'TOKEN', 'args' : nextMessage }
+                                msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
+                                #permite mais que um cozinheiro, pois enviamos na mensagem que cozinheiro e que pediu e podemos-lhe responder
+                                if nextMessage['method'] == 'EQPT_REQ':
+                                    msg['args']['args']['cookReq'] = self.node_table[nextMessage['args']['cook']]
+                                self.send(self.successor_address, msg)
+                                self.logger.debug('Sending Token: %s', nextMessage['method'])
+                        else:
+                            self.send(self.successor_address, o)
+                    elif o['args']['dest_id']==self.own_id:
+                        self.logger.debug('Sending object to Worker Thread')
+                        queueIn.put(o['args'])
+                        msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
+                        self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
+                    else:  
+                        self.send(self.successor_address, o)
+
+
