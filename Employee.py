@@ -14,72 +14,12 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
-queueIn = queue.Queue()
-queueOut = queue.Queue()
-
 class Employee(Node):
     def __init__(self, own_id, address, root_id, root_address):
-        super().__init__(own_id, address, root_id, root_address)
-        global queueIn
-        global queueOut
-        w = Worker()
-        w.start()
-        self.logger = logging.getLogger("Employee {}".format(self.own_id))
-
-    def run(self):
-        self.socket.bind(self.address)
-
-        self.neighbor_advertise()
-
-        done = False
-        while not done:
-            p, addr = self.recv()
-            if p is not None:
-                o = pickle.loads(p)
-                #self.logger.debug('O: %s', o)
-                if o['method'] == 'NODE_JOIN':
-                    self.neighbor_ack(o['args'])
-                elif o['method'] == 'PRINT_RING':
-                    self.print_ring()
-                elif o['method'] == 'PRINT_TABLE':
-                    self.print_table()
-                elif o['method'] == 'NODE_DISCOVERY':
-                    self.propagate_table(o['args'])   
-                elif o['method'] == 'TOKEN': # send to worker
-                    if o['args']=='EMPTY':
-                        if not queueOut.empty():
-                            nextMessage = queueOut.get()
-                            if nextMessage != None:
-                                if nextMessage['method']=='DELIVER': #enviar pra cliente caso method seja deliver
-                                    msg = { 'method':'DELIVER' ,
-                                            'args': { 'ticket': nextMessage['args']['orderTicket']
-                                            }}
-
-                                    clientAddress = nextMessage['args']['client_addr']
-                                    self.logger.debug('Sending client %s food', nextMessage['args']['orderTicket'])
-                                    self.send(clientAddress, msg)
-                                else: #else propaga o token
-                                    # wrap in TOKEN
-                                    msg = { 'method' : 'TOKEN', 'args' : nextMessage }
-                                    msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
-                                    self.send(self.successor_address, msg)
-                                    self.logger.debug('Sending Token: %s', nextMessage['method'])
-                        else:
-                            self.send(self.successor_address, o)
-                    elif o['args']['dest_id']==self.own_id:
-                        self.logger.debug('Sending object to Worker Thread')
-                        queueIn.put(o['args'])
-                        msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
-                        self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
-                    else:  
-                        self.send(self.successor_address, o)
-
-
-class Worker(threading.Thread):
-    def __init__(self):
         threading.Thread.__init__(self)
-        global queueIn
-        global queueOut
+        self.node_comm = Node(own_id, address, root_id, root_address, 'Employee')
+        self.node_comm.start()
+        self.logger = logging.getLogger("Employee {}".format(self.node_comm.own_id))
         self.queueDone = []
         self.queueWaiting = [] # clients waiting to pickup
 
@@ -89,7 +29,7 @@ class Worker(threading.Thread):
             self.queueWaiting.remove(args['orderTicket'])
             msg = { 'method' : 'DELIVER',
                     'args' : args }
-            queueOut.put(msg)  
+            self.node_comm.queueOut.put(msg)  
             return True                  
         return False
 
@@ -101,7 +41,7 @@ class Worker(threading.Thread):
     def run(self):
         done = False
         while not done:
-            foodRequest = queueIn.get()
+            foodRequest = self.node_comm.queueIn.get()
             if foodRequest is not None:
                 if len(self.queueWaiting) != 0:
                     self.deliver(self.queueWaiting[0])

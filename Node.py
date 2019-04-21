@@ -26,7 +26,7 @@ class Node(threading.Thread):
         self.name = name
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
-        self.logger = logging.getLogger("Node {}".format(self.own_id))
+        self.logger = logging.getLogger("{}".format(self.name)) #format bem?
         self.node_table = dict()
         self.queueIn = queue.Queue()
         self.queueOut = queue.Queue()
@@ -145,6 +145,15 @@ class Node(threading.Thread):
                                 # wrap in TOKEN
                                 if nextMessage['method'] == 'ORDER_RECVD':
                                     self.send(nextMessage['args']['client_addr'], nextMessage)
+
+                                elif nextMessage['method']=='DELIVER': #enviar pra cliente caso method seja deliver
+                                    msg = { 'method':'DELIVER' ,
+                                            'args': { 'ticket': nextMessage['args']['orderTicket']
+                                            }}
+
+                                    clientAddress = nextMessage['args']['client_addr']
+                                    self.logger.debug('Sending client %s food', nextMessage['args']['orderTicket'])
+                                    self.send(clientAddress, msg)
 
                                 else:
                                     msg = { 'method' : 'TOKEN', 'args' : nextMessage }
