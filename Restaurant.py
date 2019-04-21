@@ -93,39 +93,44 @@ class Worker(threading.Thread):
         self.queueWaiting = queue.Queue()
         self.equipmentsDict = {'hamburger':0,'drinks':0,'fries':0}
 
-    def lockEquipment(self,args):
-        if not self.queueWaiting.empty():
+    def lockEquipment(self, args):
+        #weird workaround? dpes this make sense?
+        #caso a fila esteja vazia atendemos logo este pedido, senao vemos os que estao na fila
+        # print('Locking eqpt...')
+        if self.equipmentsDict[args['equipment']] == 0:
+            self.equipmentsDict[args['equipment']] = 1
+            msg ={'method':'ACCESS_GRANTED', 
+                    'args': { 'dest': 'Cook' ,
+                              'equipment' : args['equipment'] }}
+            queueOut.put(msg)
+            # print('Eqpt locked')
+        else:
             self.queueWaiting.put(args)
-        else: #weird workaround? dpes this make sense?
-              #caso a fila esteja vazia atendemos logo este pedido, senao vemos os que estao na fila
-            if equipmentsDict[args['equipment']] == 0:
-                equipmentsDict[args['equipment']] = 1
-                msg ={'method':'ACCESS_GRANTED', 
-                        'args': { 'dest': 'Cook' ,
-                                  'equipment' : args['equipment'] }}
-                queueOut.put(msg)
-            else:
-                self.queueWaiting.put(args)
-                
+            
 
     def releaseEquipment(self,args):
         #por o eqpt a 0 caso nao haja ninguem a usar
-        if self.queueWaiting.empty():
-            equipmentsDict[args['equipment']] = 0
-        else:
-            self.lockEquipment(self.queueWaiting.get())
+        # if self.queueWaiting.empty():
+        self.equipmentsDict[args['equipment']] = 0
+        # else:
+        #     self.lockEquipment(self.queueWaiting.get())
 
     def run(self):
         done = False
         while not done:
-            foodRequest = queueIn.get()
-            if foodRequest is not None:
-                print(foodRequest)
-                if foodRequest['method']=='EPQT_REQ':
+            if not self.queueWaiting.empty(): # if request is waiting
+                self.lockEquipment(self.queueWaiting.get())
+            else:
+                foodRequest = queueIn.get()
+            if foodRequest is not None: # if new request came in
+                # print('What came in:', foodRequest['method'])
+                if foodRequest['method']=='EQPT_REQ':
+                    # print('Sending to func lockEquipment')
                     self.lockEquipment(foodRequest['args'])
-                
-                if foodRequest['method']=='EPQT_USED':
+                elif foodRequest['method']=='EQPT_USED':
+                    # print('Sending to func releaseEquipment')
                     self.releaseEquipment(foodRequest['args'])
-
+                # else:
+                    # print('Did not enter any')
             else:
                 work()

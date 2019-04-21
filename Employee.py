@@ -76,7 +76,7 @@ class Worker(threading.Thread):
         global queueIn
         global queueOut
         self.queueDone = []
-        self.queueWaiting = queue.Queue() # clients waiting to pickup
+        self.queueWaiting = [] # clients waiting to pickup
 
     def deliver(self, args):
         if args['order']['orderTicket'] in self.queueDone:
@@ -85,15 +85,16 @@ class Worker(threading.Thread):
                     'args' : args }
             queueOut.put(msg)                           
         else:
-            self.queueWaiting.put(args)
+            if not args in self.queueWaiting:
+                self.queueWaiting.append(args)
 
     def run(self):
         done = False
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-                if not self.queueWaiting.empty():
-                    self.deliver(self.queueDone[0])
+                if len(self.queueWaiting) != 0:
+                    self.deliver(self.queueWaiting[0])
 
                 #o cliente esta pronto a ir buscar
                 if foodRequest['method']=='PICKUP':

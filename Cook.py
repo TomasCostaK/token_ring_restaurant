@@ -80,7 +80,7 @@ class Worker(threading.Thread):
         answer = queueIn.get()
         if answer['method'] == 'ACCESS_GRANTED' and answer['args']['equipment'] == food:
             # access granted to equipment
-            time = equipmentsTime['equipment']
+            time = self.equipmentsTime[answer['args']['equipment']]
             work(time)
             return
         else: # put msg back in queueIn to be processed again
@@ -108,8 +108,8 @@ class Worker(threading.Thread):
         # when all items from request are ready, send message to Employee            
         msg = {'method' : 'ORDER_DONE', 
                'args' : { 'dest': 'Employee' ,
-                        'client_addr': foodRequest['args']['client_addr'],
-                        'orderTicket': foodRequest['args']['orderTicket'] }}
+                        'client_addr': args['client_addr'],
+                        'orderTicket': args['orderTicket'] }}
         queueOut.put(msg)
 
 
