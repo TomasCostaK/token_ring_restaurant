@@ -43,16 +43,16 @@ class Node(threading.Thread):
             else:
                 return p, addr
 
-    def put_queueIn(self, o):
-        self.queueIn.put(o)
+    # def put_queueIn(self, o):
+    #     self.queueIn.put(o)
 
-    def get_queueIn(self):
-        if self.queueIn.empty():
-            return 0
-        return self.queueIn.get()
+    # def get_queueIn(self):
+    #     if self.queueIn.empty():
+    #         return 0
+    #     return self.queueIn.get()
 
-    def put_queueOut(self, o):
-        self.queueIn.put(o)
+    # def put_queueOut(self, o):
+    #     self.queueIn.put(o)
 
     def neighbor_advertise(self):
         self.logger.debug('Advertising to neighbors')

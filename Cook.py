@@ -19,18 +19,19 @@ class Cook(threading.Thread):
         threading.Thread.__init__(self)
         self.equipmentsTime = {'hamburger':3,'drinks':1,'fries':5}
         self.node_comm = Node(own_id, address, root_id, root_address)
+        self.node_comm.start()
         self.logger = logging.getLogger("Cook {}".format(self.own_id))
 
     def wait_on_item(self, food):
         # wait until acces is granted to equipment needed
-        answer = get_queueIn()
+        answer = self.node_comm.queueIn.get()
         if answer['method'] == 'ACCESS_GRANTED' and answer['args']['equipment'] == food:
             # access granted to equipment
             time = self.equipmentsTime[answer['args']['equipment']]
             work(time)
             return
         else: # put msg back in queueIn to be processed again
-            queueIn.put(answer)
+            self.node_comm.queueIn.put(answer)
             self.wait_on_item(food)
 
     def cook_item(self, food):
@@ -38,13 +39,13 @@ class Cook(threading.Thread):
                'args': { 'dest': 'Restaurant' ,
                          'equipment' : food ,
                          'cook' : 'Cook'}}
-        put_queueOut(msg)
+        self.node_comm.queueOut.put(msg)
         self.wait_on_item(food)
         # notify restaurant that equipment is free
         msg = { 'method' : 'EQPT_USED', 
                 'args' : { 'dest' : 'Restaurant', 
                            'equipment': food}}
-        put_queueOut(msg)
+        self.node_comm.queueOut.put(msg)
 
 
     def cook(self, args):
@@ -57,13 +58,13 @@ class Cook(threading.Thread):
                'args' : { 'dest': 'Employee' ,
                         'client_addr': args['client_addr'],
                         'orderTicket': args['orderTicket'] }}
-        put_queueOut(msg)
+        self.node_comm.queueOut.put(msg)
 
 
     def run(self):
         done = False
         while not done:
-            foodRequest = get_queueIn()
+            foodRequest = self.node_comm.queueIn.get()
             if foodRequest is not None:
                 # o cliente esta pronto a ir buscar
                 if foodRequest['method']=='COOK':
