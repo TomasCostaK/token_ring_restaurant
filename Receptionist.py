@@ -42,7 +42,7 @@ class Receptionist(Node):
             p, addr = self.recv()
             if p is not None:
                 o = pickle.loads(p)
-                self.logger.debug('O: %s', o)
+                #self.logger.debug('O: %s', o)
                 if o['method'] == 'NODE_JOIN':
                     self.neighbor_ack(o['args'])
                 elif o['method'] == 'PRINT_RING':

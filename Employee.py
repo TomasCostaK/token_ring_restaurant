@@ -4,6 +4,7 @@ import time
 import pickle
 import socket
 import logging
+from utils import work
 # import argparse
 import threading
 import queue
@@ -35,7 +36,7 @@ class Employee(Node):
             p, addr = self.recv()
             if p is not None:
                 o = pickle.loads(p)
-                self.logger.debug('O: %s', o)
+                #self.logger.debug('O: %s', o)
                 if o['method'] == 'NODE_JOIN':
                     self.neighbor_ack(o['args'])
                 elif o['method'] == 'PRINT_RING':
@@ -61,7 +62,7 @@ class Employee(Node):
                         else:
                             self.send(self.successor_address, o)
                     elif o['args']['dest_id']==self.own_id:
-                        self.logger.debug('Sending object to Worker Thread')
+                        self.logger.debug('Sending %s object to Worker Thread', o)
                         queueIn.put(o['args'])
                         msg = { 'method' : 'TOKEN', 'args' : 'EMPTY' }
                         self.send(self.successor_address, msg) #ja o recebeu e agora vai enviar um token vazio para o proximo
@@ -74,24 +75,25 @@ class Worker(threading.Thread):
         threading.Thread.__init__(self)
         global queueIn
         global queueOut
-        self.queueDone = queue.Queue()
+        self.queueDone = []
         self.queueWaiting = queue.Queue() # clients waiting to pickup
 
     def deliver(self, args):
-        if args['orderTicket'] in self.queueDone:
+        if args['order']['orderTicket'] in self.queueDone:
+            queueDone.remove(args['order']['orderTicket'])
             msg = { 'method' : 'DELIVER',
                     'args' : args }
             queueOut.put(msg)                           
         else:
-            queueWaiting.put(args)
+            self.queueWaiting.put(args)
 
     def run(self):
         done = False
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-                if not queueWaiting.empty():
-                    self.deliver(queueDone.get())
+                if not self.queueWaiting.empty():
+                    self.deliver(self.queueDone[0])
 
                 #o cliente esta pronto a ir buscar
                 if foodRequest['method']=='PICKUP':
@@ -99,7 +101,7 @@ class Worker(threading.Thread):
 
                 #caso a comida esteja pronta
                 elif foodRequest['method']=='ORDER_DONE':
-                    self.queueDone.put(foodRequest['args']['orderTicket'])
+                    self.queueDone.append(foodRequest['args']['orderTicket'])
 
                 work()
             else:

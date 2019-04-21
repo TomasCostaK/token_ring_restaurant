@@ -36,7 +36,7 @@ class Restaurant(Node):
             p, addr = self.recv()
             if p is not None:
                 o = pickle.loads(p)
-                self.logger.debug('O: %s', o)
+                #self.logger.debug('O: %s', o)
                 if o['method'] == 'NODE_JOIN':
                     self.neighbor_ack(o['args'])
                 elif o['method'] == 'PRINT_RING':
@@ -52,6 +52,15 @@ class Restaurant(Node):
                                                   'order' : o['args'] }, 
                                        'dest_id' : self.node_table['Receptionist'] }}
                     self.send(self.successor_address, msg)
+
+                elif o['method'] == 'PICKUP': # need to wrap in TOKEN
+                    msg = { 'method' : 'TOKEN' , 
+                            'args' : { 'method' : o['method'], 
+                                       'args' : { 'client_addr' : addr, 
+                                                  'order' : o['args'] }, 
+                                       'dest_id' : self.node_table['Employee'] }}
+                    self.send(self.successor_address, msg)
+                
                 elif o['method'] == 'TOKEN': # send to worker
                     if o['args']=='EMPTY':
                         if not queueOut.empty():
@@ -81,12 +90,12 @@ class Worker(threading.Thread):
         threading.Thread.__init__(self)
         global queueIn
         global queueOut
-        queueWaiting = queue.Queue()
+        self.queueWaiting = queue.Queue()
         self.equipmentsDict = {'hamburger':0,'drinks':0,'fries':0}
 
     def lockEquipment(self,args):
-        if not queueWaiting.empty():
-            queueWaiting.put(args)
+        if not self.queueWaiting.empty():
+            self.queueWaiting.put(args)
         else: #weird workaround? dpes this make sense?
               #caso a fila esteja vazia atendemos logo este pedido, senao vemos os que estao na fila
             if equipmentsDict[args['equipment']] == 0:
@@ -96,21 +105,22 @@ class Worker(threading.Thread):
                                   'equipment' : args['equipment'] }}
                 queueOut.put(msg)
             else:
-                queueWaiting.put(args)
+                self.queueWaiting.put(args)
                 
 
     def releaseEquipment(self,args):
         #por o eqpt a 0 caso nao haja ninguem a usar
-        if queueWaiting.empty():
+        if self.queueWaiting.empty():
             equipmentsDict[args['equipment']] = 0
         else:
-            self.lockEquipment(queueWaiting.get())
+            self.lockEquipment(self.queueWaiting.get())
 
     def run(self):
         done = False
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
+                print(foodRequest)
                 if foodRequest['method']=='EPQT_REQ':
                     self.lockEquipment(foodRequest['args'])
                 
