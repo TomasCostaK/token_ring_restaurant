@@ -128,7 +128,7 @@ class Node(threading.Thread):
             p, addr = self.recv()
             if p is not None:
                 o = pickle.loads(p)
-                self.logger.info('O: %s', o)
+                #self.logger.info('O: %s', o)
                 if o['method'] == 'NODE_JOIN':
                     self.neighbor_ack(o['args'])
                 elif o['method'] == 'PRINT_RING':
@@ -143,13 +143,18 @@ class Node(threading.Thread):
                             nextMessage = self.queueOut.get()
                             if nextMessage != None:
                                 # wrap in TOKEN
-                                msg = { 'method' : 'TOKEN', 'args' : nextMessage }
-                                msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
-                                #permite mais que um cozinheiro, pois enviamos na mensagem que cozinheiro e que pediu e podemos-lhe responder
-                                if nextMessage['method'] == 'EQPT_REQ':
-                                    msg['args']['args']['cookReq'] = self.node_table[nextMessage['args']['cook']]
-                                self.send(self.successor_address, msg)
-                                self.logger.debug('Sending Token: %s', nextMessage['method'])
+                                if nextMessage['method'] == 'ORDER_RECVD':
+                                    self.send(nextMessage['args']['client_addr'], nextMessage)
+
+                                else:
+                                    msg = { 'method' : 'TOKEN', 'args' : nextMessage }
+                                    msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
+                        
+                                    #permite mais que um cozinheiro, pois enviamos na mensagem que cozinheiro e que pediu e podemos-lhe responder
+                                    if nextMessage['method'] == 'EQPT_REQ':
+                                        msg['args']['args']['cookReq'] = self.node_table[nextMessage['args']['cook']]
+                                    self.send(self.successor_address, msg)
+                                    self.logger.debug('Sending Token: %s', nextMessage['method'])
                         else:
                             self.send(self.successor_address, o)
                     elif o['args']['dest_id']==self.own_id:
