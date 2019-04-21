@@ -53,8 +53,11 @@ class Cook(Node):
                                 # wrap in TOKEN
                                 msg = { 'method' : 'TOKEN', 'args' : nextMessage }
                                 msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
+                                #permite mais que um cozinheiro, pois enviamos na mensagem que cozinheiro e que pediu e podemos-lhe responder
+                                if nextMessage['method'] == 'EQPT_REQ':
+                                    msg['args']['args']['cookReq'] = self.node_table[nextMessage['args']['cook']]
                                 self.send(self.successor_address, msg)
-                                self.logger.debug('Sending Token', msg)
+                                self.logger.debug('Sending Token: %s', nextMessage['method'])
                         else:
                             self.send(self.successor_address, o)
                     elif o['args']['dest_id']==self.own_id:
@@ -90,13 +93,14 @@ class Worker(threading.Thread):
     def cook_item(self, food):
         msg = {'method':'EQPT_REQ', 
                'args': { 'dest': 'Restaurant' ,
-                         'equipment' : food }}
+                         'equipment' : food ,
+                         'cook' : 'Cook'}}
         queueOut.put(msg)
         self.wait_on_item(food)
         # notify restaurant that equipment is free
         msg = { 'method' : 'EQPT_USED', 
                 'args' : { 'dest' : 'Restaurant', 
-                           'equipment': food }}
+                           'equipment': food}}
         queueOut.put(msg)
 
 

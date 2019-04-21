@@ -68,9 +68,9 @@ class Restaurant(Node):
                             if nextMessage != None:
                                 # wrap in TOKEN
                                 msg = { 'method' : 'TOKEN', 'args' : nextMessage }
-                                msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
+                                msg['args']['dest_id'] = nextMessage['args']['dest']
                                 self.send(self.successor_address, msg)
-                                self.logger.debug('Sending Token', msg)
+                                self.logger.debug('Sending Token: %s', nextMessage['method'])
                         else:
                             self.send(self.successor_address, o)
                     elif o['args']['dest_id']==self.own_id:
@@ -100,10 +100,9 @@ class Worker(threading.Thread):
         if self.equipmentsDict[args['equipment']] == 0:
             self.equipmentsDict[args['equipment']] = 1
             msg ={'method':'ACCESS_GRANTED', 
-                    'args': { 'dest': 'Cook' ,
+                    'args': { 'dest': args['cookReq'] ,
                               'equipment' : args['equipment'] }}
             queueOut.put(msg)
-            # print('Eqpt locked')
         else:
             self.queueWaiting.put(args)
             

@@ -65,7 +65,7 @@ class Receptionist(Node):
                                     msg = { 'method' : 'TOKEN', 'args' : nextMessage }
                                     msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
                                     self.send(self.successor_address, msg)
-                                    self.logger.debug('Sending Token', msg)
+                                    self.logger.debug('Sending Token: %s', nextMessage['method'])
                         else:
                             self.send(self.successor_address, o)
                             #caso nao esteja vazio e seja para ele
@@ -90,8 +90,6 @@ class Worker(threading.Thread):
         while not done:
             foodRequest = queueIn.get()
             if foodRequest is not None:
-                # self.logger.debug('Got request: %s', foodRequest)
-
                 # send confirmation with ticket to client
                 orderTicket = uuid.uuid1()
                 msg = { 'method' : 'ORDER_RECVD', 'args': { 'orderTicket' : orderTicket, 'client_addr' : foodRequest['args']['client_addr'] }} # send confirmation back to client
