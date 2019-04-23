@@ -10,6 +10,8 @@ import queue
 import threading
 from utils import work
 from Node import Node
+from Entity import Entity
+
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
@@ -18,7 +20,7 @@ logging.basicConfig(level=logging.DEBUG,
 class Restaurant(Node):
     def __init__(self, own_id, address, root_id, root_address):
         threading.Thread.__init__(self)
-        self.node_comm = Node(own_id, address, root_id, root_address, 'Restaurant')
+        self.node_comm = Entity(own_id, address, root_id, root_address, 'Restaurant')
         self.node_comm.start()
         self.logger = logging.getLogger("Restaurant {}".format(self.node_comm.own_id))
         self.queueWaiting = queue.Queue()

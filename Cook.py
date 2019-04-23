@@ -9,6 +9,7 @@ import threading
 from utils import work
 import queue
 from Node import Node
+from Entity import Entity
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
@@ -18,7 +19,7 @@ class Cook(threading.Thread):
     def __init__(self, own_id, address, root_id, root_address):
         threading.Thread.__init__(self)
         self.equipmentsTime = {'hamburger':3,'drinks':1,'fries':5}
-        self.node_comm = Node(own_id, address, root_id, root_address, 'Cook')
+        self.node_comm = Entity(own_id, address, root_id, root_address, 'Cook')
         self.node_comm.start()
         self.logger = logging.getLogger("Cook {}".format(self.node_comm.own_id))
 
