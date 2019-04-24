@@ -15,11 +15,19 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M:%S')
 
 class Cook(threading.Thread):
-    def __init__(self, own_id, address, root_id, root_address):
+    def __init__(self, own_id=2, address=('localhost', 5002), root_id=0, root_address=('localhost', 5000)):
         threading.Thread.__init__(self)
+
+        self.own_id = own_id
+        self.address = address
+        self.root_id = root_id
+        self.root_address = root_address  
+ 
         self.equipmentsTime = {'hamburger':3,'drinks':1,'fries':5}
+
         self.node_comm = Entity(own_id, address, root_id, root_address, 'Cook')
         self.node_comm.start()
+
         self.logger = logging.getLogger("Cook {}".format(self.node_comm.own_id))
 
     def wait_on_item(self, food):
@@ -60,8 +68,24 @@ class Cook(threading.Thread):
                         'orderTicket': args['orderTicket'] }}
         self.node_comm.queueOut.put(msg)
 
-
     def run(self):
+        
+        if self.own_id == self.root_id:
+            # Await for DHT to get stable
+            time.sleep(3)
+
+            # Print the ring order for debug
+            self.node_comm.print_ring()
+
+            # Start building the table from the root node
+            self.node_comm.propagate_table()
+
+            # Await for DHT to get stable
+            time.sleep(3)
+
+            # Print the ring order for debug
+            self.node_comm.print_table()
+
         done = False
         while not done:
             foodRequest = self.node_comm.queueIn.get()

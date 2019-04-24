@@ -26,7 +26,7 @@ class Node(threading.Thread):
         self.name = name
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
-        self.logger = logging.getLogger("Node {}".format(self.own_id)) #format bem?
+        self.logger = logging.getLogger("{} {}".format(self.name, self.own_id)) #format bem?
         self.node_table = dict()
         self.queueIn = queue.Queue()
         self.queueOut = queue.Queue()
@@ -102,7 +102,7 @@ class Node(threading.Thread):
         msg = { 'method' : 'PRINT_TABLE' }
         self.send(self.successor_address, msg)
 
-    def propagate_table(self, args):
+    def propagate_table(self, args={ 'table' : {} , 'rounds' : 0 }):
         self.node_table = args['table'] # update my table with the one recieved
         rounds = args['rounds']
         if self.own_id == self.root_id: # if we are at root, we've made a lap
@@ -122,6 +122,17 @@ class Node(threading.Thread):
 
         self.neighbor_advertise()
 
+        time.sleep(3) # wait until table stabilizes
+        # print ring
+        if self.own_id == self.root_id:
+            self.print_ring()
+            self.propagate_table()
+
+        time.sleep(3) # wait until table stabilizes
+        # print node table
+        if self.own_id == self.root_id:
+            self.print_table()
+
         done = False
         while not done:
             p, addr = self.recv()
@@ -137,49 +148,20 @@ class Node(threading.Thread):
                 elif o['method'] == 'NODE_DISCOVERY':
                     self.propagate_table(o['args'])   
 
-                #elif o['method'] == 'ORDER': # need to wrap in TOKEN
-                #    msg = { 'method' : 'TOKEN' , 
-                #            'args' : { 'method' : o['method'], 
-                #                       'args' : { 'client_addr' : addr, 
-                #                                  'order' : o['args'] }, 
-                #                       'dest_id' : self.node_table['Receptionist'] }}
-                #    self.send(self.successor_address, msg)
-
-                #elif o['method'] == 'PICKUP': # need to wrap in TOKEN
-                #    msg = { 'method' : 'TOKEN' , 
-                #            'args' : { 'method' : o['method'], 
-                #                       'args' : { 'client_addr' : addr, 
-                #                                  'order' : o['args'] }, 
-                #                       'dest_id' : self.node_table['Employee'] }}
-                #    self.send(self.successor_address, msg)
-
                 elif o['method'] == 'TOKEN': # send to worker
                    if o['args']=='EMPTY':
                        if not self.queueOut.empty():
                            nextMessage = self.queueOut.get()
                            if nextMessage != None:
                                # wrap in TOKEN
-                               if nextMessage['method'] == 'ORDER_RECVD':
-                                   self.send(nextMessage['args']['client_addr'], nextMessage)
-
-                               elif nextMessage['method']=='DELIVER': #enviar pra cliente caso method seja deliver
-                                   msg = { 'method':'DELIVER' ,
-                                           'args': { 'ticket': nextMessage['args']['orderTicket']
-                                           }}
-
-                                   clientAddress = nextMessage['args']['client_addr']
-                                   self.logger.debug('Sending client %s food', nextMessage['args']['orderTicket'])
-                                   self.send(clientAddress, msg)
-
-                               else:
-                                   msg = { 'method' : 'TOKEN', 'args' : nextMessage }
-                                   msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
-                        
-                                   #permite mais que um cozinheiro, pois enviamos na mensagem que cozinheiro e que pediu e podemos-lhe responder
-                                   if nextMessage['method'] == 'EQPT_REQ':
-                                       msg['args']['args']['cookReq'] = self.node_table[nextMessage['args']['cook']]
-                                   self.send(self.successor_address, msg)
-                                   self.logger.debug('Sending Token: %s', nextMessage['method'])
+                               msg = { 'method' : 'TOKEN', 'args' : nextMessage }
+                               msg['args']['dest_id'] = self.node_table[nextMessage['args']['dest']]
+                    
+                               #permite mais que um cozinheiro, pois enviamos na mensagem que cozinheiro e que pediu e podemos-lhe responder
+                               if nextMessage['method'] == 'EQPT_REQ':
+                                   msg['args']['args']['cookReq'] = self.node_table[nextMessage['args']['cook']]
+                               self.send(self.successor_address, msg)
+                               self.logger.debug('Sending Token: %s', nextMessage['method'])
                        else:
                            self.send(self.successor_address, o)
                    elif o['args']['dest_id']==self.own_id:
