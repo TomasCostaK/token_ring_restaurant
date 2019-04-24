@@ -102,7 +102,6 @@ class Node(threading.Thread):
         msg = { 'method' : 'PRINT_TABLE' }
         self.send(self.successor_address, msg)
 
-
     def propagate_table(self, args):
         self.node_table = args['table'] # update my table with the one recieved
         rounds = args['rounds']

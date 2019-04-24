@@ -37,6 +37,8 @@ def main(port, ring, timeout):
     o = pickle.loads(p)
     logger.info('Received ticket %s', o['args'])
 
+    my_ticket = o['args']['orderTicket']
+
     # Pickup order 
     logger.info('Pickup order %s', o['args'])
     p = pickle.dumps({"method": 'PICKUP', "args": o['args']})
@@ -49,8 +51,11 @@ def main(port, ring, timeout):
 
     # Close socket
     sock.close()
-
-    return 0
+    
+    if o['args']['ticket'] == my_ticket:
+        return 0
+    else:
+        return -1
 
 
 if __name__ == '__main__':

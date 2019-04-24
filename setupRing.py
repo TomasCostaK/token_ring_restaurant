@@ -72,7 +72,8 @@ def main(number_nodes):
 
     time.sleep(5)
 
-    subprocess.run(['python3', 'client.py'])
+    subprocess.run(['python3', 'client.py'], check=True)
+    subprocess.run(['python3', 'client.py'], check=True)
 
     for node in ring:
         node.join()
