@@ -26,7 +26,7 @@ class Node(threading.Thread):
         self.name = name
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
-        self.logger = logging.getLogger("Node {}".format(self.own_id)) #format bem?
+        self.logger = logging.getLogger("{} {}".format(self.name, self.own_id)) #format bem?
         self.node_table = dict()
         self.queueIn = queue.Queue()
         self.queueOut = queue.Queue()
@@ -102,7 +102,7 @@ class Node(threading.Thread):
         msg = { 'method' : 'PRINT_TABLE' }
         self.send(self.successor_address, msg)
 
-    def propagate_table(self, args):
+    def propagate_table(self, args={ 'table' : {} , 'rounds' : 0 }):
         self.node_table = args['table'] # update my table with the one recieved
         rounds = args['rounds']
         if self.own_id == self.root_id: # if we are at root, we've made a lap
@@ -121,6 +121,17 @@ class Node(threading.Thread):
         self.socket.bind(self.address)
 
         self.neighbor_advertise()
+
+        time.sleep(3) # wait until table stabilizes
+        # print ring
+        if self.own_id == self.root_id:
+            self.print_ring()
+            self.propagate_table()
+
+        time.sleep(3) # wait until table stabilizes
+        # print node table
+        if self.own_id == self.root_id:
+            self.print_table()
 
         done = False
         while not done:

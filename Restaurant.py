@@ -17,11 +17,19 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M:%S')
 
 class Restaurant(threading.Thread):
-    def __init__(self, own_id, address, root_id, root_address):
+    def __init__(self, own_id=0, address=('localhost', 5000), root_id=0, root_address=('localhost', 5000)):
         threading.Thread.__init__(self)
+
+        self.own_id = own_id
+        self.address = address
+        self.root_id = root_id
+        self.root_address = root_address  
+
         self.node_comm = Entity(own_id, address, root_id, root_address, 'Restaurant')
         self.node_comm.start()
+
         self.logger = logging.getLogger("Restaurant {}".format(self.node_comm.own_id))
+
         self.queueWaiting = queue.Queue()
         self.equipmentsDict = {'hamburger':0,'drinks':0,'fries':0}
 
@@ -47,6 +55,24 @@ class Restaurant(threading.Thread):
         #     self.lockEquipment(self.queueWaiting.get())
 
     def run(self):
+        
+        if self.own_id == self.root_id:
+            # Await for DHT to get stable
+            time.sleep(3)
+
+            # Print the ring order for debug
+            self.node_comm.print_ring()
+
+            # Start building the table from the root node
+            self.node_comm.propagate_table()
+
+            # Await for DHT to get stable
+            time.sleep(3)
+
+            # Print the ring order for debug
+            self.node_comm.print_table()
+
+
         done = False
         while not done:
             if not self.queueWaiting.empty(): # if request is waiting

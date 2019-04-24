@@ -28,46 +28,46 @@ def main(number_nodes):
     tsocket.settimeout(3)
 
     # create Restaurant 
-    restaurant = Restaurant(0, ('localhost', 5000), 0, ('localhost', 5000))
+    restaurant = Restaurant()
     restaurant.start()
     ring.append(restaurant)
     logger.info(restaurant)
 
     # create Cook 
-    cook = Cook(2, ('localhost', 5002), 0, ('localhost', 5000))
+    cook = Cook()
     cook.start()
     ring.append(cook)
     logger.info(cook)
 
     # create Receptionist 
-    receptionist = Receptionist(1, ('localhost', 5001), 0, ('localhost', 5000))
+    receptionist = Receptionist()
     receptionist.start()
     ring.append(receptionist)
     logger.info(receptionist)
     
     # create Employee 
-    employee = Employee(3, ('localhost', 5003), 0, ('localhost', 5000))
+    employee = Employee()
     employee.start()
     ring.append(employee)
     logger.info(employee)
 
-    # Await for DHT to get stable
-    time.sleep(5)
+#     # Await for DHT to get stable
+#     time.sleep(5)
 
-    # Print the ring order for debug
-    msg = { 'method' : 'PRINT_RING' }
-    tsocket.sendto(pickle.dumps(msg), ('localhost', 5000))
+#     # Print the ring order for debug
+#     msg = { 'method' : 'PRINT_RING' }
+#     tsocket.sendto(pickle.dumps(msg), ('localhost', 5000))
 
-    # Start building the table from the root node
-    msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : {} , 'rounds' : 0 } }
-    tsocket.sendto(pickle.dumps(msg), ('localhost', 5000))
+#     # Start building the table from the root node
+#     msg = { 'method' : 'NODE_DISCOVERY', 'args' : { 'table' : {} , 'rounds' : 0 } }
+#     tsocket.sendto(pickle.dumps(msg), ('localhost', 5000))
 
-    # Await for DHT to get stable
-    time.sleep(5)
+#     # Await for DHT to get stable
+#     time.sleep(5)
 
-    # Print the ring order for debug
-    msg = { 'method' : 'PRINT_TABLE' }
-    tsocket.sendto(pickle.dumps(msg), ('localhost', 5000))
+#     # Print the ring order for debug
+#     msg = { 'method' : 'PRINT_TABLE' }
+#     tsocket.sendto(pickle.dumps(msg), ('localhost', 5000))
 
     time.sleep(5)
 
