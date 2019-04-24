@@ -5,7 +5,6 @@ import time
 import socket
 import pickle
 import subprocess
-from Node import Node
 from Restaurant import Restaurant
 from Receptionist import Receptionist
 from Cook import Cook
@@ -77,6 +76,8 @@ def main(number_nodes):
 
     for node in ring:
         node.join()
+
+    return 0
 
 if __name__ == '__main__':
     main(5)

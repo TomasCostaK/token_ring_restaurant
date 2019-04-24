@@ -9,7 +9,7 @@ import queue
 from utils import work
 # import argparse
 import threading
-from Node import Node
+from Entity import Entity
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
@@ -20,10 +20,10 @@ logging.basicConfig(level=logging.DEBUG,
 # Employee
 # Receptionist
 
-class Receptionist(Node):
+class Receptionist(threading.Thread):
     def __init__(self, own_id, address, root_id, root_address):
         threading.Thread.__init__(self)
-        self.node_comm = Node(own_id, address, root_id, root_address, 'Receptionist')
+        self.node_comm = Entity(own_id, address, root_id, root_address, 'Receptionist')
         self.node_comm.start()
         self.logger = logging.getLogger("Receptionist {}".format(self.node_comm.own_id))
 
