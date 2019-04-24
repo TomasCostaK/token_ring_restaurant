@@ -8,14 +8,13 @@ from utils import work
 # import argparse
 import threading
 import queue
-from Node import Node
 from Entity import Entity
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
-class Employee(Node):
+class Employee(threading.Thread):
     def __init__(self, own_id, address, root_id, root_address):
         threading.Thread.__init__(self)
         self.node_comm = Entity(own_id, address, root_id, root_address, 'Employee')

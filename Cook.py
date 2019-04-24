@@ -8,7 +8,6 @@ import logging
 import threading
 from utils import work
 import queue
-from Node import Node
 from Entity import Entity
 
 logging.basicConfig(level=logging.DEBUG,

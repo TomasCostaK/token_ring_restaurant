@@ -9,7 +9,6 @@ import queue
 from utils import work
 # import argparse
 import threading
-from Node import Node
 from Entity import Entity
 
 logging.basicConfig(level=logging.DEBUG,
@@ -21,7 +20,7 @@ logging.basicConfig(level=logging.DEBUG,
 # Employee
 # Receptionist
 
-class Receptionist(Node):
+class Receptionist(threading.Thread):
     def __init__(self, own_id, address, root_id, root_address):
         threading.Thread.__init__(self)
         self.node_comm = Entity(own_id, address, root_id, root_address, 'Receptionist')
