@@ -9,7 +9,7 @@ import argparse
  
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    format='%(asctime)s %(name)-15s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
 
@@ -33,30 +33,35 @@ def main(port, ring, timeout):
     sock.sendto(p, ring)
 
     # Wait for Ticket
-    p = sock.recvfrom(1024)
+    p,addr = sock.recvfrom(1024)
     o = pickle.loads(p)
-    logger.info('Received ticket %s', o[args])
+    logger.info('Received ticket %s', o['args'])
+
+    my_ticket = o['args']['orderTicket']
 
     # Pickup order 
-    logger.info('Pickup order %s', o[args])
-    p = pickle.dumps({"method": 'PICKUP', "args": o[args]})
+    logger.info('Pickup order %s', o['args'])
+    p = pickle.dumps({"method": 'PICKUP', "args": o['args']})
     sock.sendto(p, ring)
 
     # Wait for order
-    p = sock.recvfrom(1024)
+    p, addr = sock.recvfrom(1024)
     o = pickle.loads(p)
-    logger.info('Got order %s', o[args])
+    logger.info('Got order %s', o['args'])
 
     # Close socket
-    socket.close()
-
-    return 0
+    sock.close()
+    
+    if o['args']['ticket'] == my_ticket:
+        return 0
+    else:
+        return -1
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Pi HTTP server')
     parser.add_argument('-p', dest='port', type=int, help='client port', default=5004)
     parser.add_argument('-r', dest='ring', type=int, help='ring ports ', default=5000)
-    parser.add_argument('-t', dest='timeout', type=int, help='socket timeout', default=30)
+    parser.add_argument('-t', dest='timeout', type=int, help='socket timeout', default=20)
     args = parser.parse_args()
     main(args.port, ('localhost', args.ring), args.timeout)

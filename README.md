@@ -23,6 +23,10 @@
 ## Prerequisites
 
 * Clone this repository
+* Install requirements
+```console
+$ pip3 install -r requirements.txt
+```
 
 ## What to do next
 	Junçao:
