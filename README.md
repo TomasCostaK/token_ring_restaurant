@@ -1,24 +1,8 @@
 # Drive-Through Restaurant P2P
 
-## How to run
-**What to do next:**
-	Lifecycle Nodes:
+## Description
 
-		Junçao:
-			Ligam-se todos ao restaurante
-			Passar mensagem com o dicionario com os ID's das entidades
-			Passar 2 vezes a mensagem
-
-		Discovery:
-			--
-			--
-
-		Processo de receber token:
-			1. UDP
-			2. Check if ID da MSG == NodeID (else go to 5.)
-			3. Guardar a mensagem na queue in
-			4. Ver se queueOut > 0 e enviar a mensagem no queue out
-			5. Passa token a sucessor
+Implementation of a working restaurant using a token ring.
 
 ## Prerequisites
 
@@ -27,23 +11,6 @@
 ```console
 $ pip3 install -r requirements.txt
 ```
-
-## What to do next
-	Junçao:
-		Ligam-se todos ao restaurante
-		Passar mensagem com o dicionario com os ID's das entidades
-		Passar 2 vezes a mensagem
-
-	Discovery:
-		--
-		--
-
-	Processo de receber token:
-		1. UDP
-		2. Check if ID da MSG == NodeID (else go to 5.)
-		3. Guardar a mensagem na queue in
-		4. Ver se queueOut > 0 e enviar a mensagem no queue out
-		5. Passa token a sucessor
 
 ## How to run
 Open two terminals:
@@ -68,7 +35,8 @@ $ git pull upstream master
 
 ## Authors
 
-* **Mário Antunes** - [mariolpantunes](https://github.com/mariolpantunes)
+* **Tomás Costa** - [TomasCostaK](https://github.com/TomasCostaK)
+* **João Marques** - [joao-p-marques](https://github.com/joao-p-marques)
 
 ## License
 
